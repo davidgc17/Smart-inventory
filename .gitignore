@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+media/
+staticfiles/
+.DS_Store
+.vscode/
+checklist.docx
+tailwindcss.exe

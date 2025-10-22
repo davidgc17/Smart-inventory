@@ -5,8 +5,11 @@ from django.utils.text import slugify
 from django.core.files.base import ContentFile
 from django.core.exceptions import ValidationError
 
+DEFAULT_TENANT = getattr(settings, "DEFAULT_TENANT", uuid.UUID("00000000-0000-0000-0000-000000000001"))
+
 class Location(models.Model):
-    name = models.CharField(max_length=120)
+    name = models.CharField(max_length=255)
+    tenant_id = models.UUIDField(default=DEFAULT_TENANT, editable=False, db_index=True)
     parent = models.ForeignKey(
         "self", null=True, blank=True, on_delete=models.SET_NULL, related_name="children"
     )
@@ -47,17 +50,17 @@ class Location(models.Model):
         """
         ids = []
         stack = [self]
-        while stack:
-            node = stack.pop()
-            if node.pk not in ids:
-                if include_self or node.pk != self.pk:
-                    ids.append(node.pk)
-                stack.extend(list(node.children.all()))
+        while queue:
+            node = queue.pop(0)
+            if include_self or node.pk != self.pk:
+                ids.append(node.pk)
+            queue.extend(list(node.children.all()))
         return ids
 
 
 class Product(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant_id = models.UUIDField(default=DEFAULT_TENANT, editable=False, db_index=True)
     name = models.CharField(max_length=200)
     sku = models.CharField(max_length=100, unique=True, blank=True, null=True)
     category = models.CharField(max_length=100, blank=True)
@@ -79,6 +82,25 @@ class Product(models.Model):
         null=True,
         blank=True
     )
+
+    class Meta:
+        # Orden por defecto en el admin y en queryset sin order_by()
+        ordering = ["name"]
+
+        # Garantiza que no existan dos productos con el mismo (tenant, ubicación, nombre)
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenant_id", "location", "name"],
+                name="uniq_product_per_location_tenant",
+            )
+        ]
+
+        # Índices para acelerar filtros habituales
+        indexes = [
+            models.Index(fields=["tenant_id", "location"]),
+            models.Index(fields=["tenant_id", "name"]),
+        ]
+
 
     def save(self, *args, **kwargs):
         creating = self._state.adding
@@ -113,6 +135,7 @@ class Movement(models.Model):
     TYPES = [(IN, "Entry"), (OUT, "Exit"), (ADJ, "Adjust"), (AUD, "Audit")]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant_id = models.UUIDField(default=DEFAULT_TENANT, editable=False, db_index=True)
     product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="movements")
     location = models.ForeignKey(Location, on_delete=models.PROTECT, related_name="movements")
     quantity = models.IntegerField(help_text="Positivo para entradas, negativo para salidas")
@@ -126,6 +149,7 @@ class Movement(models.Model):
 
 class Batch(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="batches")
+    tenant_id = models.UUIDField(default=DEFAULT_TENANT, editable=False, db_index=True)
     quantity = models.PositiveIntegerField(default=0)
     entry_date = models.DateField(auto_now_add=True)
     expiration_date = models.DateField(null=True, blank=True)

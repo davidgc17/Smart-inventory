@@ -31,6 +31,9 @@ CSRF_TRUSTED_ORIGINS = [
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/scan/'
 
+DEFAULT_TENANT = "00000000-0000-0000-0000-000000000001"
+
+
 
 # ---------------------------------------------------------------------
 # Apps

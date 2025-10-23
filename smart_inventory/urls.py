@@ -3,11 +3,12 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
+# smart_inventory/urls.py
+from django.contrib import admin
+from django.urls import path, include
+
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("api/", include("inventory.api")),  # ✅ Incluye las rutas desde api.py
-    path("", include("inventory.urls")),     # Incluye las vistas HTML
+    path("", include("inventory.urls")),         # vistas HTML (incluye /scan/)
+    path("api/", include("inventory.api")),      # API REST (incluye /api/scan/)
 ]
-
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

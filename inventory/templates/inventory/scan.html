@@ -30,6 +30,19 @@
     <h2 class="text-xl font-semibold mt-6">Formulario manual</h2>
     <form onsubmit="event.preventDefault(); enviar();" class="space-y-4">
       {% csrf_token %}
+
+      <!-- 🔎 Buscador con autocompletado -->
+      <div>
+        <label for="productSearch" class="block font-medium">Buscar producto</label>
+        <input id="productSearch" class="w-full border border-gray-300 rounded px-3 py-2"
+               placeholder="Escribe nombre, SKU o PRD..."
+               list="productSearchResults" autocomplete="off" />
+        <datalist id="productSearchResults"></datalist>
+        <p class="text-xs text-gray-500 mt-1">
+          Al seleccionar una sugerencia se rellenará el campo Payload automáticamente.
+        </p>
+      </div>
+
       <div>
         <label for="payload" class="block font-medium">Payload (PRD:&lt;uuid&gt;)</label>
         <input id="payload" class="w-full border border-gray-300 rounded px-3 py-2" />
@@ -120,38 +133,101 @@
       return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(u);
     }
 
+    // =============================
+    // 🔎 AUTOCOMPLETADO DE PRODUCTOS
+    // =============================
+    (function initProductAutocomplete() {
+      const searchInput   = document.getElementById('productSearch');
+      const datalist      = document.getElementById('productSearchResults');
+      const payloadInput  = document.getElementById('payload');
+      const locationSelect= document.getElementById('loc');
+
+      // Mapa label -> payload
+      const optionMap = new Map();
+      let timer = null;
+      let lastController = null;
+
+      function debounce(fn, ms) {
+        clearTimeout(timer);
+        timer = setTimeout(fn, ms);
+      }
+
+      async function fetchResults(q) {
+        try {
+          if (lastController) lastController.abort();
+          lastController = new AbortController();
+
+          const params = new URLSearchParams({ q });
+          const loc = (locationSelect && locationSelect.value) ? locationSelect.value.trim() : '';
+          if (loc) params.set('location', loc);
+
+          const res = await fetch(`/products/search/?${params.toString()}`, { signal: lastController.signal });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return await res.json();
+        } catch (_e) {
+          return { results: [] };
+        }
+      }
+
+      function renderOptions(results) {
+        optionMap.clear();
+        datalist.innerHTML = results.map(r => {
+          const label = [r.name, r.location].filter(Boolean).join(' — ');
+          optionMap.set(label, r.payload);
+          return `<option value="${label}"></option>`;
+        }).join('');
+      }
+
+      if (searchInput) {
+        searchInput.addEventListener('input', () => {
+          const q = searchInput.value.trim();
+          if (!q) { datalist.innerHTML = ''; optionMap.clear(); return; }
+          debounce(async () => {
+            const json = await fetchResults(q);
+            renderOptions(json.results || []);
+          }, 250);
+        });
+
+        searchInput.addEventListener('change', () => {
+          const val = searchInput.value.trim();
+          if (optionMap.has(val)) {
+            payloadInput.value = optionMap.get(val); // PRD:...
+          }
+        });
+      }
+    })();
+    // =============================
+
     // ---- Envío de formulario ----
     async function enviar() {
       const mtype = document.getElementById('mtype').value;
       const payloadRaw = (document.getElementById('payload').value || '').trim();
 
-    // Validación del payload según el tipo de movimiento
-    if (!['IN', 'AUD', 'AUDTOTAL'].includes(mtype)) {
-      if (!payloadRaw.startsWith('PRD:')) { 
-        alert('El payload debe empezar por PRD:'); 
-        return; 
+      // Validación del payload según el tipo de movimiento
+      if (!['IN', 'AUD', 'AUDTOTAL'].includes(mtype)) {
+        if (!payloadRaw.startsWith('PRD:')) { 
+          alert('El payload debe empezar por PRD:'); 
+          return; 
+        }
+        const uuid = payloadRaw.slice(4).trim();
+        if (!validUUID(uuid)) { 
+          alert('UUID no válido.'); 
+          return; 
+        }
       }
-      const uuid = payloadRaw.slice(4).trim();
-      if (!validUUID(uuid)) { 
-        alert('UUID no válido.'); 
-        return; 
-      }
-    }
-
 
       // Para OUT exigimos PRD:<uuid>, pero no para Auditoría
       if (mtype === 'OUT') {
-      if (!payloadRaw.startsWith('PRD:')) {
+        if (!payloadRaw.startsWith('PRD:')) {
           alert('El payload debe empezar por PRD:');
           return;
-      }
-      const uuid = payloadRaw.slice(4).trim();
-      if (!validUUID(uuid)) {
+        }
+        const uuid = payloadRaw.slice(4).trim();
+        if (!validUUID(uuid)) {
           alert('UUID no válido.');
           return;
+        }
       }
-  }
-
 
       const body = {
         payload: payloadRaw,
@@ -181,16 +257,10 @@
 
         const raw = await res.text();
         let data;
-        try { data = JSON.parse(raw); } catch { data = { non_json: true, raw }; 
-        
-
-      
+        try { data = JSON.parse(raw); } catch { data = { non_json: true, raw }; }
 
         // AUDITORÍA TOTAL — versión simplificada y fiable
         if (mtype === 'AUDTOTAL') {
-          console.log("🟢 Ejecutando bloque Auditoría Total:", data);
-
-          // Intentar localizar el inventario sin asumir estructura
           const inv = data?.data?.inventory || data?.inventory || data?.data?.data?.inventory;
           const total = data?.data?.total_locations || data?.total_locations || data?.data?.data?.total_locations;
 
@@ -204,7 +274,6 @@
             return;
           }
 
-          // Generar salida visual clara y estilizada
           let html = `
             <h2 class="text-2xl font-bold text-blue-600 mb-3">📦 Auditoría total</h2>
             <p class="text-sm text-gray-700 mb-6">Total de ubicaciones: <b>${total || inv.length}</b></p>
@@ -226,7 +295,7 @@
                   </thead>
                   <tbody>
             `;
-            loc.items.forEach(it => {
+            (loc.items || []).forEach(it => {
               const lotes = it.batches?.length
                 ? it.batches.map(b => `#${b.id} (${b.quantity}u, ${b.expiration_date || '-'})`).join("<br>")
                 : '<span class="text-gray-400 italic">Sin lotes</span>';
@@ -247,14 +316,8 @@
           });
 
           document.getElementById("out").innerHTML = html;
-          console.log("✅ Auditoría total renderizada correctamente.");
           return;
         }
-}
-
-
-      
-      
 
         if (mtype === 'IN' && data && data.payload) {
           const qrCanvas = document.getElementById('qr-canvas');
@@ -266,42 +329,38 @@
         const headersObj = {};
         res.headers.forEach((v, k) => headersObj[k] = v);
         if (mtype === "AUD" && data && data.items) {
-            // Generar tabla visual de auditoría
-            const rows = data.items.map(item => {
-                const lotes = item.batches.map(
-                b => `<li>Lote #${b.id} — ${b.quantity} u. ${b.expiration_date ? `(${b.expiration_date})` : ''}</li>`
+          const rows = data.items.map(item => {
+            const lotes = item.batches.map(
+              b => `<li>Lote #${b.id} — ${b.quantity} u. ${b.expiration_date ? `(${b.expiration_date})` : ''}</li>`
             ).join("");
-
             return `
-                <tr>
-                    <td class="border px-3 py-2 font-medium">${item.product}</td>
-                    <td class="border px-3 py-2 text-center">${item.total_quantity}</td>
-                    <td class="border px-3 py-2 text-center">${item.nearest_expiration || "-"}</td>
-                    <td class="border px-3 py-2"><ul>${lotes}</ul></td>
-                </tr>`;
-            }).join("");
+              <tr>
+                <td class="border px-3 py-2 font-medium">${item.product}</td>
+                <td class="border px-3 py-2 text-center">${item.total_quantity}</td>
+                <td class="border px-3 py-2 text-center">${item.nearest_expiration || "-"}</td>
+                <td class="border px-3 py-2"><ul>${lotes}</ul></td>
+              </tr>`;
+          }).join("");
 
-            const html = `
-                <h3 class="text-lg font-semibold mb-2">Auditoría — ${data.location}</h3>
-                <p class="text-sm text-gray-600 mb-2">Total productos: <b>${data.total_products}</b></p>
-                <table class="border-collapse w-full text-sm">
-                <thead>
-                    <tr class="bg-gray-200">
-                    <th class="border px-3 py-2 text-left">Producto</th>
-                    <th class="border px-3 py-2 text-center">Cantidad total</th>
-                    <th class="border px-3 py-2 text-center">Caducidad más próxima</th>
-                    <th class="border px-3 py-2 text-left">Lotes</th>
-                    </tr>
-                </thead>
-                <tbody>${rows}</tbody>
-                </table>`;
-
-            document.getElementById("out").innerHTML = html;
+          const html = `
+            <h3 class="text-lg font-semibold mb-2">Auditoría — ${data.location}</h3>
+            <p class="text-sm text-gray-600 mb-2">Total productos: <b>${data.total_products}</b></p>
+            <table class="border-collapse w-full text-sm">
+              <thead>
+                <tr class="bg-gray-200">
+                  <th class="border px-3 py-2 text-left">Producto</th>
+                  <th class="border px-3 py-2 text-center">Cantidad total</th>
+                  <th class="border px-3 py-2 text-center">Caducidad más próxima</th>
+                  <th class="border px-3 py-2 text-left">Lotes</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>`;
+          document.getElementById("out").innerHTML = html;
         } else {
-            // Por defecto, mostrar el JSON como antes
-            document.getElementById("out").textContent = JSON.stringify({
-                ok: res.ok, status: res.status, headers: headersObj, data
-            }, null, 2);
+          document.getElementById("out").textContent = JSON.stringify({
+            ok: res.ok, status: res.status, headers: headersObj, data
+          }, null, 2);
         }
 
       } catch (e) {
@@ -394,31 +453,24 @@
     document.addEventListener('DOMContentLoaded', () => {
       console.log("DOM cargado, inicializando escáner...");
 
-      // Esperar un poco para asegurar que las librerías estén cargadas
+      // Verificar QR lib
       setTimeout(() => {
-        // Verificar que Html5Qrcode esté disponible
         if (typeof Html5Qrcode === 'undefined') {
-          console.error('Html5Qrcode no está disponible. Verifica que la librería se haya cargado correctamente.');
+          console.error('Html5Qrcode no está disponible. Verifica la carga de la librería.');
           document.getElementById('cam-status').textContent = 'Error: Librería QR no cargada';
           return;
         }
-
-        // Botón para cambiar de cámara
         document.getElementById('switchBtn').addEventListener('click', switchCamera);
-
-        // Inicia el escáner de QR
         startScanner();
       }, 100);
 
-      // Manejo del formulario "Entrada"
+      // Mostrar/ocultar campos de Entrada
       const tipoSelect = document.getElementById('mtype');
       const extraForm = document.getElementById('entrada-extra');
-
       const updateExtra = () => {
         if (tipoSelect.value === 'IN') extraForm.classList.remove('hidden');
         else extraForm.classList.add('hidden');
       };
-
       tipoSelect.addEventListener('change', updateExtra);
       updateExtra();
     });

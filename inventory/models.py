@@ -1,9 +1,25 @@
 import uuid, io
 from django.db import models
+from django.db.models import Q
 from django.conf import settings
 from django.utils.text import slugify
 from django.core.files.base import ContentFile
 from django.core.exceptions import ValidationError
+from django.utils.text import slugify
+import unicodedata
+
+
+
+class TenantQuerySet(models.QuerySet):
+    def for_tenant(self, tenant_id):
+        return self.filter(tenant_id=tenant_id)
+
+class TenantManager(models.Manager):
+    def get_queryset(self):
+        return TenantQuerySet(self.model, using=self._db)
+
+    def for_tenant(self, tenant_id):
+        return self.get_queryset().for_tenant(tenant_id)
 
 DEFAULT_TENANT = getattr(settings, "DEFAULT_TENANT", uuid.UUID("00000000-0000-0000-0000-000000000001"))
 
@@ -13,6 +29,7 @@ class Location(models.Model):
     parent = models.ForeignKey(
         "self", null=True, blank=True, on_delete=models.SET_NULL, related_name="children"
     )
+    objects = TenantManager()
 
     def clean(self):
         # Evita bucles (una ubicación no puede ser su propio ancestro)
@@ -57,6 +74,8 @@ class Location(models.Model):
             queue.extend(list(node.children.all()))
         return ids
 
+def normalize_name(s: str) -> str:
+    return unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode().lower().strip()
 
 class Product(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -75,35 +94,35 @@ class Product(models.Model):
     location = models.ForeignKey(
         "Location", on_delete=models.SET_NULL, null=True, blank=True
     )
+    objects = TenantManager()
 
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
-        blank=True
+        blank=True,
     )
+    name_normalized = models.CharField(max_length=220, db_index=True, editable=False, blank=True)
 
     class Meta:
-        # Orden por defecto en el admin y en queryset sin order_by()
         ordering = ["name"]
-
-        # Garantiza que no existan dos productos con el mismo (tenant, ubicación, nombre)
         constraints = [
+            models.CheckConstraint(check=Q(min_stock__gte=0), name="product_min_stock_gte_0"),
             models.UniqueConstraint(
-                fields=["tenant_id", "location", "name"],
-                name="uniq_product_per_location_tenant",
-            )
+                fields=["tenant_id", "location", "name_normalized"],
+                name="uniq_product_per_location_tenant_norm",
+            ),
         ]
-
-        # Índices para acelerar filtros habituales
         indexes = [
-            models.Index(fields=["tenant_id", "location"]),
+            models.Index(fields=["tenant_id", "location", "name_normalized"]),
             models.Index(fields=["tenant_id", "name"]),
         ]
 
 
+
     def save(self, *args, **kwargs):
         creating = self._state.adding
+        self.name_normalized = normalize_name(self.name or "")
 
         if creating and not self.qr_payload:
             self.qr_payload = f"PRD:{self.id}"
@@ -111,8 +130,12 @@ class Product(models.Model):
         if creating and not self.sku:
             base_sku = slugify(self.name)[:10].upper()
             self.sku = f"{base_sku}-{str(self.id)[:4]}"
-
+        
+        def normalize_name(s: str) -> str:
+            return unicodedata.normalize("NFKD", s).encode("ascii","ignore").decode().lower().strip()
+            
         super().save(*args, **kwargs)
+        
 
         if creating and not self.qr_image:
             from .utils import make_qr_contentfile
@@ -128,6 +151,18 @@ class Product(models.Model):
     def location_path(self):
         """Devuelve la ruta jerárquica completa de la ubicación del producto."""
         return self.location.full_path() if self.location else "(sin ubicación)"
+    
+    @staticmethod
+    def normalize_name(s: str) -> str:
+        import unicodedata
+        return unicodedata.normalize("NFKD", s).encode("ascii","ignore").decode().lower().strip()
+
+    def save(self, *args, **kwargs):
+        creating = self._state.adding
+        self.name_normalized = self.normalize_name(self.name or "")
+        if (creating or not self.qr_payload) and self.id:
+            self.qr_payload = f"PRD:{self.id}"
+        super().save(*args, **kwargs)
 
 
 class Movement(models.Model):
@@ -143,6 +178,7 @@ class Movement(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     metadata = models.JSONField(default=dict, blank=True)
+    objects = TenantManager()
 
     class Meta:
         ordering = ["-created_at"]
@@ -154,9 +190,15 @@ class Batch(models.Model):
     entry_date = models.DateField(auto_now_add=True)
     expiration_date = models.DateField(null=True, blank=True)
     notes = models.TextField(blank=True, null=True)
+    objects = TenantManager()
+    depleted_at = models.DateTimeField(null=True, blank=True)   # cuándo quedó a 0
+    is_depleted = models.BooleanField(default=False, db_index=True)
 
     class Meta:
         ordering = ["entry_date"]
+        constraints = [
+            models.CheckConstraint(check=Q(quantity__gte=0), name="batch_quantity_gte_0"),
+        ]
 
     def __str__(self):
         return f"Lote de {self.product.name} ({self.quantity} uds, {self.entry_date})"

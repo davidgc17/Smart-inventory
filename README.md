@@ -83,5 +83,5 @@ Cocina / Armario 1 / Caja Roja
 
 ## 👨‍💻 Autor
 
-Desarrollado por **David G. C.**  
+Desarrollado por **David García**.  
 📦 Proyecto en evolución — primeras pruebas funcionales completadas (Fase 3).

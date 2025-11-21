@@ -1,9 +1,9 @@
 from django.urls import path, include
-from .views import scan_view 
-from .api import ScanEndpoint, ProductQuickSearch
-from .api import router
+from .views import scan_view
+from inventory.views import locations_manager
 
 urlpatterns = [
     path("scan/", scan_view, name="scan"),  # HTML
-    path("products/search/", ProductQuickSearch.as_view(), name="product_quick_search"),
+    path("ubicaciones/", locations_manager, name="locations-manager"),
+    path("api/", include("inventory.api")),
 ]

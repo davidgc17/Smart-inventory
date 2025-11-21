@@ -22,6 +22,14 @@ from .utils import available_stock
 from .models import Batch, Product, Location, Movement
 from .serializers import ProductSerializer, LocationSerializer, MovementSerializer
 
+# 👇 IMPORTAMOS LAS VISTAS DE UBICACIONES
+from .locations_api import (
+    LocationTreeView,
+    LocationCreateView,
+    LocationUpdateView,
+    LocationDeleteView,
+)
+
 DEFAULT_TENANT = uuid.UUID(
     getattr(settings, "DEFAULT_TENANT", "00000000-0000-0000-0000-000000000001")
 )
@@ -70,10 +78,9 @@ router.register(r"movements", MovementViewSet)
 
 
 # -------------------------------------------------------------------
-#  BUSCADOR RÁPIDO (corrige indentación y duplicidad)
+#  BUSCADOR RÁPIDO
 # -------------------------------------------------------------------
 class ProductQuickSearch(APIView):
-    # CAMBIO: este endpoint debe ser público para el autocompletado
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
@@ -103,7 +110,6 @@ class ProductQuickSearch(APIView):
                 }
             )
 
-        # CAMBIO: este return estaba dentro del bucle por error.
         return Response({"results": data})
 
 
@@ -124,7 +130,8 @@ class ScanEndpoint(APIView):
             except ValueError:
                 return Response({"detail": "Cantidad inválida"}, status=400)
 
-            loc_name = (request.data.get("location") or "").strip()
+            # ID de ubicación (UUID) que llega desde el <select>
+            loc_id_raw = (request.data.get("location") or "").strip()
 
             # Normalización del tipo (acepta español o código)
             mtype_raw = (
@@ -132,6 +139,7 @@ class ScanEndpoint(APIView):
                 .strip()
                 .upper()
             )
+
             TYPE_MAP = {
                 "ENTRADA": "IN",
                 "IN": "IN",
@@ -145,32 +153,37 @@ class ScanEndpoint(APIView):
                 "AJUSTE": "ADJ",
                 "ADJ": "ADJ",
             }
-            mtype = TYPE_MAP.get(mtype_raw, mtype_raw)
 
+            
+            mtype = TYPE_MAP.get(mtype_raw, mtype_raw)
             # -------------------------------------------------------
             # Buscar ubicación (opcional) + queryset base
             # -------------------------------------------------------
             location = None
             location_qs = Location.objects.none()
-            if loc_name:
+            if loc_id_raw:
+                try:
+                    loc_uuid = uuid.UUID(loc_id_raw)
+                except ValueError:
+                    return Response(
+                        {"detail": "Ubicación inválida"}, status=status.HTTP_400_BAD_REQUEST
+                    )
+
                 location = Location.objects.filter(
-                    name=loc_name, tenant_id=DEFAULT_TENANT
+                    id=loc_uuid, tenant_id=DEFAULT_TENANT
                 ).first()
                 if not location:
                     return Response(
                         {"detail": "Ubicación no encontrada"},
                         status=status.HTTP_404_NOT_FOUND,
                     )
-                # Si tu modelo tiene jerarquía y quieres incluir sububicaciones,
-                # reemplaza esta línea por una que obtenga descendientes.
-                # Por ahora: solo la ubicación exacta.
+
                 location_qs = Location.objects.filter(
                     id=location.id, tenant_id=DEFAULT_TENANT
                 )
 
-            # -------------------------------------------------------
+
             # Helper: extraer UUID del payload "PRD:<uuid>"
-            # -------------------------------------------------------
             def parse_uuid_from_payload(p):
                 if not p.startswith("PRD:"):
                     return None
@@ -217,9 +230,18 @@ class ScanEndpoint(APIView):
                     tenant_id=DEFAULT_TENANT,
                 )
 
+                loc_final = location or product.location
+                if not loc_final:
+                    return Response(
+                        {
+                            "detail": "Debe indicar una ubicación o el producto debe tener una ubicación asignada."
+                        },
+                        status=400,
+                    )
+
                 Movement.objects.create(
                     product=product,
-                    location=location,
+                    location=loc_final,
                     quantity=abs(qty),
                     movement_type="IN",
                     metadata={"batch_id": batch.id, "entry_date": str(batch.entry_date)},
@@ -231,11 +253,13 @@ class ScanEndpoint(APIView):
                     product.qr_payload = payload_str
                     product.save(update_fields=["qr_payload"])
 
-                return Response({
-                    "ok": True,
-                    "payload": payload_str,  # <- usa el string garantizado
-                    "detail": f"Entrada registrada (lote {batch.id})"
-                })
+                return Response(
+                    {
+                        "ok": True,
+                        "payload": payload_str,
+                        "detail": f"Entrada registrada (lote {batch.id})",
+                    }
+                )
 
             # -------------------------------------------------------
             # SALIDA
@@ -243,36 +267,36 @@ class ScanEndpoint(APIView):
             elif mtype == "OUT":
                 if not incoming_uuid:
                     return Response(
-                        {"detail": "Payload inválido (se espera PRD:<uuid>)"},
-                        status=400,
+                        {"detail": "Payload inválido (se espera PRD:<uuid>)"}, status=400
                     )
 
                 product = Product.objects.filter(
                     id=incoming_uuid, tenant_id=DEFAULT_TENANT
                 ).first()
                 if not product:
-                    return Response({"detail": "Producto no encontrado"}, status=404)
-
-                # 1) Stock disponible (fuente de verdad = suma de lotes)
-                batch_total = (
-                    Batch.objects.filter(product=product, tenant_id=DEFAULT_TENANT)
-                    .aggregate(t=Coalesce(Sum("quantity"), 0))["t"]
-                    or 0
-                )
+                    return Response(
+                        {"detail": "Producto no encontrado"}, status=404
+                    )
 
                 need = abs(qty)
+
+                batch_total = Batch.objects.filter(
+                    product=product, tenant_id=DEFAULT_TENANT
+                ).aggregate(t=Coalesce(Sum("quantity"), 0))["t"] or 0
+
                 if need > int(batch_total):
                     return Response(
                         {
                             "ok": False,
                             "error": "insufficient_stock",
                             "detail": f"Stock insuficiente: disponible {int(batch_total)}, solicitado {need}",
+                            "available": int(batch_total),
+                            "requested": need,
                         },
                         status=400,
                     )
 
-                # 2) Descontar por FIFO: caduca antes primero, luego más antiguo
-                consumed = []  # [(batch_id, taken), ...] para traza/auditoría
+                consumed = []
                 with transaction.atomic():
                     fifo_batches = (
                         Batch.objects.select_for_update()
@@ -292,20 +316,37 @@ class ScanEndpoint(APIView):
                     for b in fifo_batches:
                         if remaining <= 0:
                             break
-                        take = min(b.quantity, remaining)
-                        if take > 0:
-                            b.quantity = b.quantity - take
-                            consumed.append((b.id, take))
-                            if b.quantity == 0 and not b.is_depleted:
-                                b.is_depleted = True
-                                b.depleted_at = now()
-                            b.save(
-                                update_fields=["quantity", "is_depleted", "depleted_at"]
-                            )
-                            remaining -= take
+
+                        prev_qty = int(b.quantity)
+                        take = min(prev_qty, remaining)
+                        if take <= 0:
+                            continue
+
+                        b.quantity = prev_qty - take
+                        if b.quantity == 0 and not b.is_depleted:
+                            b.is_depleted = True
+                            b.depleted_at = now()
+                        b.save(
+                            update_fields=["quantity", "is_depleted", "depleted_at"]
+                        )
+
+                        consumed.append(
+                            {
+                                "batch_id": b.id,
+                                "prev_qty": prev_qty,
+                                "taken": take,
+                                "new_qty": int(b.quantity),
+                                "expiration_date": (
+                                    b.expiration_date.isoformat()
+                                    if getattr(b, "expiration_date", None)
+                                    else None
+                                ),
+                            }
+                        )
+
+                        remaining -= take
 
                     if remaining > 0:
-                        # carrera de concurrencia (otro OUT simultáneo). aborta.
                         return Response(
                             {
                                 "ok": False,
@@ -315,29 +356,55 @@ class ScanEndpoint(APIView):
                             status=409,
                         )
 
-                    # 3) Registrar movimiento con detalle de lotes tocados (para auditoría)
+                    loc_final = location or product.location
+                    if not loc_final:
+                        return Response(
+                            {
+                                "detail": "Debe indicar una ubicación o el producto debe tener una ubicación asignada."
+                            },
+                            status=400,
+                        )
+
                     Movement.objects.create(
                         product=product,
-                        location=location,
+                        location=loc_final,
                         quantity=-need,
                         movement_type="OUT",
                         metadata={"consumed_batches": consumed},
                         tenant_id=DEFAULT_TENANT,
                     )
 
-                payload_str = f"PRD:{product.id}"
-                if not getattr(product, "qr_payload", None):
-                    product.qr_payload = payload_str
-                    product.save(update_fields=["qr_payload"])
+                stock_remaining = Batch.objects.filter(
+                    product=product, tenant_id=DEFAULT_TENANT
+                ).aggregate(t=Coalesce(Sum("quantity"), 0))["t"] or 0
 
-                return Response({"ok": True, "payload": payload_str}, status=200)
+                return Response(
+                    {
+                        "ok": True,
+                        "product": {
+                            "id": str(product.id),
+                            "name": product.name,
+                            "location": product.location.full_path()
+                            if product.location
+                            else None,
+                        },
+                        "requested": need,
+                        "stock_remaining": int(stock_remaining),
+                        "consumed_batches": consumed,
+                        "payload": product.qr_payload,
+                        "detail": "Salida registrada correctamente",
+                    },
+                    status=200,
+                )
 
             # -------------------------------------------------------
             # AUDITORÍA POR UBICACIÓN
             # -------------------------------------------------------
             elif mtype == "AUD":
                 if not location:
-                    return Response({"detail": "Debes indicar una ubicación"}, status=400)
+                    return Response(
+                        {"detail": "Debes indicar una ubicación"}, status=400
+                    )
 
                 products = (
                     Product.objects.filter(
@@ -349,20 +416,26 @@ class ScanEndpoint(APIView):
 
                 data = []
                 for p in products:
-                    batches = list(
-                        p.batches.values("id", "quantity", "expiration_date").order_by(
-                            "expiration_date"
-                        )
+                    all_batches = list(
+                        p.batches.values(
+                            "id", "quantity", "expiration_date"
+                        ).order_by("expiration_date")
                     )
-                    total_qty = sum(int(b.get("quantity") or 0) for b in batches)
+                    non_empty_batches = [
+                        b for b in all_batches if int(b.get("quantity") or 0) > 0
+                    ]
+
+                    total_qty = sum(int(b["quantity"]) for b in non_empty_batches)
+
                     nearest_exp = min(
                         (
                             b["expiration_date"]
-                            for b in batches
+                            for b in non_empty_batches
                             if b.get("expiration_date")
                         ),
                         default=None,
                     )
+
                     data.append(
                         {
                             "product": p.name,
@@ -408,26 +481,32 @@ class ScanEndpoint(APIView):
 
                     items = []
                     for p in products:
-                        batches = list(
+                        all_batches = list(
                             p.batches.values(
                                 "id", "quantity", "expiration_date"
                             ).order_by("expiration_date")
                         )
-                        total_qty = sum(int(b.get("quantity") or 0) for b in batches)
+                        non_empty_batches = [
+                            b for b in all_batches if int(b.get("quantity") or 0) > 0
+                        ]
+
+                        total_qty = sum(int(b["quantity"]) for b in non_empty_batches)
+
                         nearest_exp = min(
                             (
                                 b["expiration_date"]
-                                for b in batches
+                                for b in non_empty_batches
                                 if b.get("expiration_date")
                             ),
                             default=None,
                         )
+
                         items.append(
                             {
                                 "product": p.name,
                                 "total_quantity": total_qty,
                                 "nearest_expiration": nearest_exp,
-                                "batches": batches,
+                                "batches": non_empty_batches,
                             }
                         )
 
@@ -455,17 +534,27 @@ class ScanEndpoint(APIView):
                 )
 
         except Exception as e:
+            tb = traceback.format_exc()
             traceback.print_exc()
-            return Response({"detail": "server_error", "error": str(e)}, status=500)
+            return Response(
+                {"detail": "server_error", "error": str(e), "trace": tb}, status=500
+            )
 
 
 # -------------------------------------------------------------------
-#  URLS DEL MÓDULO
+#  URLS DEL MÓDULO API
 # -------------------------------------------------------------------
 urlpatterns = [
-    path("", include(router.urls)),
-    path("scan/", ScanEndpoint.as_view()),
-    # CAMBIO: ruta del buscador rápido
-    path("products/search/", ProductQuickSearch.as_view()),
-]
+    # --- Gestión de ubicaciones (árbol) ---
+    path("locations/tree/", LocationTreeView.as_view()),
+    path("locations/create/", LocationCreateView.as_view()),
+    path("locations/update/<int:loc_id>/", LocationUpdateView.as_view()),
+    path("locations/delete/<int:loc_id>/", LocationDeleteView.as_view()),
 
+    # --- Scan y buscador rápido ---
+    path("scan/", ScanEndpoint.as_view()),
+    path("products/search/", ProductQuickSearch.as_view()),
+
+    # --- Resto de endpoints REST estándar ---
+    path("", include(router.urls)),
+]

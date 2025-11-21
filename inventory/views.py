@@ -7,16 +7,53 @@ from django.http import JsonResponse
 from .models import Product, Movement, Location
 import json
 
+def locations_manager(request):
+    return render(request, "inventory/location_manager.html")
+
+def build_location_path(loc):
+    """
+    Construye la ruta completa: raíz > ... > hijo
+    usando la cadena de padres.
+    """
+    names = []
+    current = loc
+    while current is not None:
+        names.append(current.name)
+        current = current.parent  # FK a sí misma
+    # invertimos para que quede: raíz > ... > hijo
+    return " > ".join(reversed(names))
+
 def scan_view(request):
-    locations = Location.objects.all().order_by("name")
-    categories = Product.objects.values_list("category", flat=True).distinct().order_by("category")
-    units = Product.objects.values_list("unit", flat=True).distinct().order_by("unit")
-    
-    return render(request, "inventory/scan.html", {
-        "locations": locations,
-        "categories": categories,
-        "units": units,
-    })
+    # ubicaciones ordenadas por nombre (puedes cambiar el orden si quieres)
+    locations_qs = Location.objects.select_related("parent").order_by("name")
+
+    # le añadimos un atributo .path a cada objeto
+    locations = []
+    for loc in locations_qs:
+        loc.path = build_location_path(loc)
+        locations.append(loc)
+
+    # el resto igual que lo tuvieras antes
+    categories = (
+        Product.objects.values_list("category", flat=True)
+        .distinct()
+        .order_by("category")
+    )
+    units = (
+        Product.objects.values_list("unit", flat=True)
+        .distinct()
+        .order_by("unit")
+    )
+
+    return render(
+        request,
+        "inventory/scan.html",
+        {
+            "locations": locations,
+            "categories": categories,
+            "units": units,
+        },
+    )
 
 
 @csrf_exempt

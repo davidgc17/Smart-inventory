@@ -21,7 +21,9 @@
     <!-- Sección Cámara -->
     <h2 class="text-xl font-semibold">Cámara</h2>
     <div class="flex flex-wrap items-center gap-4 mb-4">
-      <button id="switchBtn" type="button" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Cambiar cámara</button>
+      <button id="switchBtn" type="button" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed">
+        Cambiar cámara
+      </button>
       <span id="cam-status" class="text-sm text-gray-700">Esperando permisos de la cámara…</span>
     </div>
     <div id="reader" class="w-full max-w-sm h-64 border border-gray-300 rounded bg-white"></div>
@@ -53,7 +55,8 @@
         <select id="loc" class="w-full border border-gray-300 rounded px-3 py-2">
           <option value="" disabled selected>--- Elige ubicación ---</option>
           {% for loc in locations %}
-            <option value="{{ loc.name }}">{{ loc.name }}</option>
+            <!-- value = UUID, texto = ruta completa -->
+            <option value="{{ loc.id }}">{{ loc.path }}</option>
           {% empty %}
             <option disabled>No hay ubicaciones disponibles</option>
           {% endfor %}
@@ -107,9 +110,16 @@
       <button class="w-full bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition">Enviar</button>
     </form>
 
-    <!-- Respuesta -->
-    <h3 class="text-lg font-semibold mt-6">Respuesta:</h3>
-    <pre id="out" class="mt-2 bg-gray-100 border border-gray-300 p-4 rounded min-h-[64px] text-gray-700"></pre>
+    <!-- Resultados -->
+    <h3 class="text-lg font-semibold mt-6">Resultados:</h3>
+
+    <!-- Solo OUT (tarjeta & FIFO) + IN "bonito" -->
+    <section id="out-section"
+             class="mt-2 bg-gray-50 border border-gray-200 p-4 rounded min-h-[64px]"></section>
+
+    <!-- Solo AUD / AUDTOTAL -->
+    <section id="audit-section"
+             class="mt-4 bg-gray-50 border border-gray-200 p-4 rounded"></section>
 
     <div id="qr-result" class="mt-4 hidden">
       <h4 class="font-semibold">QR generado:</h4>
@@ -132,6 +142,13 @@
     function validUUID(u) {
       return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(u);
     }
+
+    // ---- Contenedores separados de render ----
+    const $OUT = () => document.getElementById('out-section');
+    const $AUD = () => document.getElementById('audit-section');
+
+    function clearOUT() { $OUT().innerHTML = ''; }
+    function clearAUD() { $AUD().innerHTML = ''; }
 
     // =============================
     // 🔎 AUTOCOMPLETADO DE PRODUCTOS
@@ -201,10 +218,34 @@
     // ---- Envío de formulario ----
     async function enviar() {
       const mtype = document.getElementById('mtype').value;
+
+      // Limpiar contenedores según tipo
+      if (mtype === 'OUT' || mtype === 'IN' || mtype === 'ADJ') clearOUT();
+      if (mtype === 'AUD' || mtype === 'AUDTOTAL') clearAUD();
+
       const payloadRaw = (document.getElementById('payload').value || '').trim();
+
+      // Referencias a campos de Entrada (IN)
+      const newNameEl       = document.getElementById('new_name');
+      const newCategoryEl   = document.getElementById('new_category');
+      const newUnitEl       = document.getElementById('new_unit');
+      const newMinStockEl   = document.getElementById('new_min_stock');
+      const newNotesEl      = document.getElementById('new_notes');
+      const newExpDateEl    = document.getElementById('new_expiration_date');
+
+      // Reset visual de errores en campos de IN
+      if (newNameEl) {
+        newNameEl.classList.remove('border-red-500');
+        newNameEl.classList.add('border-gray-300');
+      }
+      if (newUnitEl) {
+        newUnitEl.classList.remove('border-red-500');
+        newUnitEl.classList.add('border-gray-300');
+      }
 
       // Validación del payload según el tipo de movimiento
       if (!['IN', 'AUD', 'AUDTOTAL'].includes(mtype)) {
+        // OUT y ADJ: payload PRD obligatorio
         if (!payloadRaw.startsWith('PRD:')) { 
           alert('El payload debe empezar por PRD:'); 
           return; 
@@ -216,16 +257,46 @@
         }
       }
 
-      // Para OUT exigimos PRD:<uuid>, pero no para Auditoría
-      if (mtype === 'OUT') {
-        if (!payloadRaw.startsWith('PRD:')) {
-          alert('El payload debe empezar por PRD:');
-          return;
-        }
-        const uuid = payloadRaw.slice(4).trim();
-        if (!validUUID(uuid)) {
-          alert('UUID no válido.');
-          return;
+      // Validación específica para IN:
+      // Caso 1: IN con PRD:uuid válido -> se asume producto existente (nombre/unidad opcionales)
+      // Caso 2: IN sin PRD (o PRD mal formado) -> alta de producto nuevo -> nombre + unidad OBLIGATORIOS
+      if (mtype === 'IN') {
+        const maybeUuid = payloadRaw.startsWith('PRD:') ? payloadRaw.slice(4).trim() : '';
+        const hasValidPRD = maybeUuid && validUUID(maybeUuid);
+
+        if (!hasValidPRD) {
+          const newName = (newNameEl?.value || '').trim();
+          const newUnit = (newUnitEl?.value || '').trim();
+          let missing = [];
+
+          if (!newName) {
+            missing.push('nombre');
+            if (newNameEl) {
+              newNameEl.classList.remove('border-gray-300');
+              newNameEl.classList.add('border-red-500');
+            }
+          }
+          if (!newUnit) {
+            missing.push('unidad');
+            if (newUnitEl) {
+              newUnitEl.classList.remove('border-gray-300');
+              newUnitEl.classList.add('border-red-500');
+            }
+          }
+
+          if (missing.length) {
+            // Mensaje de error en la zona de resultados (OUT)
+            $OUT().innerHTML = `
+              <div class="p-4 bg-red-50 border border-red-200 rounded">
+                <div class="font-semibold text-red-700">Faltan campos obligatorios</div>
+                <div class="text-sm text-red-700 mt-1">
+                  Para una <b>entrada sin PRD</b> tienes que indicar como mínimo
+                  <b>nombre</b> y <b>unidad</b> del producto.
+                </div>
+              </div>
+            `;
+            return;
+          }
         }
       }
 
@@ -238,12 +309,12 @@
 
       if (mtype === 'IN') {
         body.new_product = {
-          name: document.getElementById('new_name').value || '',
-          category: document.getElementById('new_category').value || '',
-          unit: document.getElementById('new_unit').value || '',
-          min_stock: parseInt(document.getElementById('new_min_stock').value || '0'),
-          notes: document.getElementById('new_notes').value || '',
-          expiration_date: document.getElementById('new_expiration_date').value || null,
+          name: newNameEl?.value || '',
+          category: newCategoryEl?.value || '',
+          unit: newUnitEl?.value || '',
+          min_stock: parseInt(newMinStockEl?.value || '0'),
+          notes: newNotesEl?.value || '',
+          expiration_date: newExpDateEl?.value || null,
         };
       }
 
@@ -259,17 +330,20 @@
         let data;
         try { data = JSON.parse(raw); } catch { data = { non_json: true, raw }; }
 
-        // AUDITORÍA TOTAL — versión simplificada y fiable
+        const headersObj = {};
+        res.headers.forEach((v, k) => headersObj[k] = v);
+
+        // AUDITORÍA TOTAL — versión simplificada y fiable (render SOLO en #audit-section)
         if (mtype === 'AUDTOTAL') {
           const inv = data?.data?.inventory || data?.inventory || data?.data?.data?.inventory;
           const total = data?.data?.total_locations || data?.total_locations || data?.data?.data?.total_locations;
 
           if (!inv || !Array.isArray(inv)) {
-            document.getElementById("out").innerHTML = `
+            $AUD().innerHTML = `
               <div class="p-4 bg-red-100 text-red-700 rounded">
                 <strong>Error:</strong> No se pudo leer el inventario desde la respuesta del servidor.
               </div>
-              <pre class="mt-2 text-xs text-gray-600">${JSON.stringify(data, null, 2)}</pre>
+              <pre class="mt-2 text-xs text-gray-600 overflow-x-auto">${JSON.stringify(data, null, 2)}</pre>
             `;
             return;
           }
@@ -315,19 +389,108 @@
             `;
           });
 
-          document.getElementById("out").innerHTML = html;
+          $AUD().innerHTML = html;
           return;
         }
 
-        if (mtype === 'IN' && data && data.payload) {
-          const qrCanvas = document.getElementById('qr-canvas');
-          const qrContainer = document.getElementById('qr-result');
-          qrContainer.classList.remove('hidden');
-          new QRious({ element: qrCanvas, value: data.payload, size: 200, level: 'H' });
+        // ENTRADA (IN) — QR + tarjeta bonita en OUT y salir
+        if (mtype === 'IN') {
+          // inner = datos reales de la API (por si vienen anidados en data.data)
+          const inner = (data && (data.payload !== undefined || data.detail !== undefined))
+                        ? data
+                        : (data && data.data) || data || {};
+
+          const qrValue = inner.payload || payloadRaw || '';
+          if (qrValue) {
+            const qrCanvas = document.getElementById('qr-canvas');
+            const qrContainer = document.getElementById('qr-result');
+            qrContainer.classList.remove('hidden');
+            new QRious({ element: qrCanvas, value: qrValue, size: 200, level: 'H' });
+          }
+
+          const detailText = inner.detail || 'Entrada registrada correctamente';
+          const shownPayload = inner.payload || payloadRaw || '(no disponible)';
+          const locText = body.location || '-';
+          const qtyText = body.quantity || 1;
+
+          $OUT().innerHTML = `
+            <div class="p-4 bg-blue-50 border border-blue-200 rounded mb-2">
+              <div class="font-semibold text-blue-800">
+                ✅ ${detailText}
+              </div>
+              <div class="mt-2 text-sm text-blue-900 space-y-1">
+                <p>Ubicación: <b>${locText}</b></p>
+                <p>Cantidad recibida: <b>${qtyText}</b></p>
+                <p>Payload / PRD:
+                  <code class="text-xs bg-blue-100 px-1 py-0.5 rounded">${shownPayload}</code>
+                </p>
+              </div>
+            </div>
+          `;
+          return;
         }
 
-        const headersObj = {};
-        res.headers.forEach((v, k) => headersObj[k] = v);
+        // SALIDA (OUT) — mostrar detalle de lotes consumidos si la petición fue OK (render SOLO en #out-section)
+        if (mtype === 'OUT') {
+          if (data && data.ok) {
+            const rows = (data.consumed_batches || []).map(cb => `
+              <tr class="hover:bg-gray-50">
+                <td class="border px-3 py-2 text-center">${cb.batch_id}</td>
+                <td class="border px-3 py-2 text-center">${cb.prev_qty}</td>
+                <td class="border px-3 py-2 text-center">−${cb.taken}</td>
+                <td class="border px-3 py-2 text-center">${cb.new_qty}</td>
+                <td class="border px-3 py-2 text-center">${cb.expiration_date || '-'}</td>
+              </tr>
+            `).join("");
+
+            const html = `
+              <div class="p-4 bg-green-50 border border-green-200 rounded mb-4">
+                <div class="font-semibold text-green-700">
+                  ✅ ${data.detail || 'Salida registrada correctamente'}
+                </div>
+                <div class="text-sm text-green-700 mt-1">
+                  Producto: <b>${data.product?.name || ''}</b> —
+                  Solicitado: <b>${data.requested}</b> —
+                  Stock restante: <b>${data.stock_remaining}</b>
+                </div>
+              </div>
+
+              <h4 class="font-semibold mb-2">Lotes consumidos (FIFO)</h4>
+              <table class="w-full border-collapse text-sm bg-white rounded overflow-hidden">
+                <thead class="bg-gray-200 text-gray-800">
+                  <tr>
+                    <th class="border px-3 py-2">Lote</th>
+                    <th class="border px-3 py-2">Cantidad previa</th>
+                    <th class="border px-3 py-2">Extraído</th>
+                    <th class="border px-3 py-2">Cantidad nueva</th>
+                    <th class="border px-3 py-2">Caducidad</th>
+                  </tr>
+                </thead>
+                <tbody>${rows || `
+                  <tr><td class="border px-3 py-2 text-center" colspan="5">
+                    <i class="text-gray-500">No se registraron lotes</i>
+                  </td></tr>`}
+                </tbody>
+              </table>
+            `;
+
+            $OUT().innerHTML = html;
+            return;
+          } else {
+            const msg = data?.detail || 'No se pudo registrar la salida.';
+            $OUT().innerHTML = `
+              <div class="p-4 bg-red-50 border border-red-200 rounded">
+                <div class="font-semibold text-red-700">❌ ${msg}</div>
+                ${data?.available !== undefined ? `
+                  <div class="text-sm text-red-700 mt-1">
+                    Disponible: <b>${data.available}</b> — Solicitado: <b>${data.requested}</b>
+                  </div>` : ''}
+              </div>`;
+            return;
+          }
+        }
+
+        // AUD — render SOLO en #audit-section
         if (mtype === "AUD" && data && data.items) {
           const rows = data.items.map(item => {
             const lotes = item.batches.map(
@@ -356,20 +519,45 @@
               </thead>
               <tbody>${rows}</tbody>
             </table>`;
-          document.getElementById("out").innerHTML = html;
+          $AUD().innerHTML = html;
         } else {
-          document.getElementById("out").textContent = JSON.stringify({
-            ok: res.ok, status: res.status, headers: headersObj, data
-          }, null, 2);
+          // Fallback: JSON crudo al contenedor correspondiente
+          const target = (mtype === 'AUD' || mtype === 'AUDTOTAL') ? $AUD() : $OUT();
+          target.innerHTML = `
+            <pre class="bg-gray-100 border border-gray-300 p-3 rounded text-gray-700 text-xs overflow-x-auto">${
+              JSON.stringify({ ok: res.ok, status: res.status, headers: headersObj, data }, null, 2)
+            }</pre>`;
         }
 
       } catch (e) {
-        document.getElementById('out').textContent = 'Error de red: ' + e;
+        const mtypeNow = document.getElementById('mtype').value;
+        const target = (mtypeNow === 'AUD' || mtypeNow === 'AUDTOTAL') ? $AUD() : $OUT();
+        target.innerHTML = `
+          <div class="p-4 bg-red-50 border border-red-200 rounded">
+            <div class="font-semibold text-red-700">❌ Error de red</div>
+            <div class="text-sm text-red-700 mt-1">${String(e)}</div>
+          </div>
+        `;
       }
     }
 
     // ---- Lector QR / Cámara ----
     let html5Qr; let cameras = []; let currentCamIndex = 0; let lastText = null;
+
+    function disableCameraUI(message) {
+      const statusEl = document.getElementById('cam-status');
+      const btn = document.getElementById('switchBtn');
+      if (statusEl) {
+        statusEl.textContent = message || 'La cámara no está disponible. Usa el formulario manual para registrar movimientos.';
+      }
+      if (btn) {
+        btn.disabled = true;
+      }
+      const reader = document.getElementById('reader');
+      if (reader) {
+        reader.classList.add('bg-gray-100');
+      }
+    }
 
     function onScanSuccess(decodedText) {
       if (decodedText === lastText) return;
@@ -387,7 +575,9 @@
       });
     }
 
-    function onScanError(_msg) {}
+    function onScanError(_msg) {
+      // Podríamos loguear si queremos, pero no es crítico para el usuario.
+    }
 
     async function startWithFacingMode() {
       await html5Qr.start(
@@ -400,7 +590,9 @@
 
     async function listAndStartPreferred() {
       cameras = await Html5Qrcode.getCameras();
-      if (!cameras || !cameras.length) throw new Error("Sin cámaras");
+      if (!cameras || !cameras.length) {
+        throw new Error("SIN_CAMARAS");
+      }
       const prefer = cameras.find(c => (c.label || "").toLowerCase().match(/back|rear|environment/));
       currentCamIndex = Math.max(0, prefer ? cameras.indexOf(prefer) : 0);
       await html5Qr.start(
@@ -419,22 +611,35 @@
           await startWithFacingMode();
           statusEl.textContent = "Cámara trasera activa. Enfoca un QR…";
         } catch (_e) {
-          await listAndStartPreferred();
-          const label = cameras[currentCamIndex]?.label || "cámara";
-          statusEl.textContent = `Cámara activa (${label}). Enfoca un QR…`;
+          try {
+            await listAndStartPreferred();
+            const label = cameras[currentCamIndex]?.label || "cámara";
+            statusEl.textContent = `Cámara activa (${label}). Enfoca un QR…`;
+          } catch (innerErr) {
+            if (innerErr && innerErr.message === "SIN_CAMARAS") {
+              disableCameraUI("No se han encontrado cámaras en este dispositivo. Usa el formulario manual.");
+            } else {
+              console.error(innerErr);
+              disableCameraUI("No se pudo iniciar la cámara. Puedes usar el formulario manual sin problema.");
+            }
+          }
         }
       } catch (e) {
-        statusEl.textContent = "Error al iniciar la cámara: " + e;
         console.error(e);
+        // Casos típicos: permisos denegados, navegador bloquea cámara, etc.
+        disableCameraUI("No fue posible acceder a la cámara (permisos denegados o dispositivo no soportado). Usa el formulario manual.");
       }
     }
 
     async function switchCamera() {
       const statusEl = document.getElementById('cam-status');
       try {
+        if (!html5Qr || !cameras.length) {
+          statusEl.textContent = "No hay más cámaras disponibles.";
+          return;
+        }
         await html5Qr.stop(); 
         await html5Qr.clear();
-        if (!cameras.length) cameras = await Html5Qrcode.getCameras();
         currentCamIndex = (currentCamIndex + 1) % cameras.length;
         await html5Qr.start(
           cameras[currentCamIndex].id,
@@ -445,24 +650,14 @@
         const label = cameras[currentCamIndex]?.label || "cámara";
         statusEl.textContent = `Cámara activa (${label}). Enfoca un QR…`;
       } catch (e) {
-        statusEl.textContent = "No se pudo cambiar de cámara: " + e;
+        console.error(e);
+        statusEl.textContent = "No se pudo cambiar de cámara. Puedes seguir usando el formulario manual.";
       }
     }
 
     // ---- Inicialización ----
     document.addEventListener('DOMContentLoaded', () => {
       console.log("DOM cargado, inicializando escáner...");
-
-      // Verificar QR lib
-      setTimeout(() => {
-        if (typeof Html5Qrcode === 'undefined') {
-          console.error('Html5Qrcode no está disponible. Verifica la carga de la librería.');
-          document.getElementById('cam-status').textContent = 'Error: Librería QR no cargada';
-          return;
-        }
-        document.getElementById('switchBtn').addEventListener('click', switchCamera);
-        startScanner();
-      }, 100);
 
       // Mostrar/ocultar campos de Entrada
       const tipoSelect = document.getElementById('mtype');
@@ -473,6 +668,29 @@
       };
       tipoSelect.addEventListener('change', updateExtra);
       updateExtra();
+
+      // Inicializar cámara con comprobación de soporte y librería
+      setTimeout(() => {
+        const statusEl = document.getElementById('cam-status');
+
+        if (typeof Html5Qrcode === 'undefined') {
+          console.error('Html5Qrcode no está disponible. Verifica la carga de la librería.');
+          disableCameraUI('La librería de cámara no se ha podido cargar. Usa el formulario manual.');
+          return;
+        }
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          console.warn('Este navegador/dispositivo no soporta getUserMedia.');
+          disableCameraUI('Este navegador no permite usar cámara. Usa el formulario manual para registrar los movimientos.');
+          return;
+        }
+
+        const switchBtn = document.getElementById('switchBtn');
+        if (switchBtn) {
+          switchBtn.addEventListener('click', switchCamera);
+        }
+        startScanner();
+      }, 100);
     });
 
   </script>

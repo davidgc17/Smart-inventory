@@ -1,6 +1,8 @@
+from urllib import request
 import uuid
 import traceback
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
+from django.utils import timezone
 
 from django.urls import path, include
 from django.conf import settings
@@ -166,11 +168,14 @@ class ScanEndpoint(APIView):
                     loc_uuid = uuid.UUID(loc_id_raw)
                 except ValueError:
                     return Response(
-                        {"detail": "Ubicación inválida"}, status=status.HTTP_400_BAD_REQUEST
+                        {"detail": "Ubicación inválida"},
+                        status=status.HTTP_400_BAD_REQUEST,
                     )
 
+                # 👇 Buscar por public_id (UUID) en vez de por id
                 location = Location.objects.filter(
-                    id=loc_uuid, tenant_id=DEFAULT_TENANT
+                    public_id=loc_uuid,
+                    tenant_id=DEFAULT_TENANT,
                 ).first()
                 if not location:
                     return Response(
@@ -178,8 +183,10 @@ class ScanEndpoint(APIView):
                         status=status.HTTP_404_NOT_FOUND,
                     )
 
+                # Para auditorías seguimos usando id interno
                 location_qs = Location.objects.filter(
-                    id=location.id, tenant_id=DEFAULT_TENANT
+                    id=location.id,
+                    tenant_id=DEFAULT_TENANT,
                 )
 
 
@@ -190,6 +197,14 @@ class ScanEndpoint(APIView):
                 return p.split(":", 1)[1].strip()
 
             incoming_uuid = parse_uuid_from_payload(payload)
+
+            mark_open = bool(request.data.get("mark_open"))
+            open_days = request.data.get("open_days")
+            try:
+                open_days = int(open_days) if open_days not in ("", None) else None
+            except ValueError:
+                open_days = None
+
 
             # -------------------------------------------------------
             # ENTRADA
@@ -265,6 +280,162 @@ class ScanEndpoint(APIView):
             # SALIDA
             # -------------------------------------------------------
             elif mtype == "OUT":
+
+                # ---------------------------------------------------
+                # PRIORIDAD: si existe una unidad abierta → consumirla primero
+                # ---------------------------------------------------
+                opened_batch = Batch.objects.filter(
+                    product_id=incoming_uuid,
+                    tenant_id=DEFAULT_TENANT,
+                    opened_units__gt=0,
+                    quantity__gt=0,
+                    is_depleted=False,
+                ).order_by("open_expires_at", "entry_date").first()
+
+                if opened_batch:
+                    # Si el usuario intenta abrir otra → error
+                    if mark_open:
+                        return Response(
+                            {"detail": "Este producto ya tiene una unidad abierta. Debes consumirla primero."},
+                            status=400,
+                        )
+
+                    # Consumir SOLO 1 unidad del lote abierto
+                    prev_qty = opened_batch.quantity
+                    opened_batch.quantity = prev_qty - 1
+                    if opened_batch.quantity == 0:
+                        opened_batch.is_depleted = True
+                        opened_batch.depleted_at = now()
+
+                    # Cerrar la unidad abierta tras consumirla
+                    opened_batch.opened_units = 0
+                    opened_batch.opened_at = None
+                    opened_batch.open_expires_at = None
+
+                    opened_batch.save(update_fields=[
+                        "quantity", "is_depleted", "depleted_at",
+                        "opened_units", "opened_at", "open_expires_at"
+                    ])
+
+                    # Registrar movimiento
+                    loc_final = location or opened_batch.product.location
+                    Movement.objects.create(
+                        product=opened_batch.product,
+                        location=loc_final,
+                        quantity=-1,
+                        movement_type="OUT",
+                        metadata={"opened_batch": opened_batch.id},
+                        tenant_id=DEFAULT_TENANT,
+                    )
+
+                    return Response({
+                        "ok": True,
+                        "detail": "Salida registrada consumiendo la unidad abierta.",
+                        "batch_id": opened_batch.id,
+                        "remaining_qty": int(opened_batch.quantity),
+                    })
+
+
+                # ---------------------------------------------------
+                # 1) Si el usuario ha marcado “abrir”
+                # ---------------------------------------------------
+                if mark_open:
+                    # Localizar el lote más cercano a caducar
+                    batch = Batch.objects.filter(
+                        product_id=incoming_uuid,
+                        tenant_id=DEFAULT_TENANT,
+                        is_depleted=False,
+                        quantity__gt=0,
+                    ).order_by("expiration_date", "entry_date").first()
+
+                    if not batch:
+                        return Response({"detail": "No hay stock para abrir."}, status=400)
+
+                    # Si ya tiene una unidad abierta → error
+                    if batch.opened_units > 0:
+                        return Response(
+                            {"detail": "Este lote ya tiene una unidad abierta. Debes consumirla primero."},
+                            status=400,
+                        )
+
+                    # Calcular caducidad tras abrir
+                    if open_days:
+                        open_expires_at = timezone.now() + timezone.timedelta(days=open_days)
+                    else:
+                        open_expires_at = None
+
+                    # Marcar como abierto
+                    batch.opened_units = 1
+                    batch.opened_at = timezone.now()
+                    batch.open_expires_at = open_expires_at
+                    batch.save()
+
+                    return Response({
+                        "ok": True,
+                        "action": "OPENED",
+                        "detail": "Unidad marcada como abierta",
+                        "batch_id": batch.id,
+                        "open_expires_at": open_expires_at,
+                    })
+                
+                # ---------------------------------------------------
+                # 2B) Si existe una unidad abierta → consumirla primero
+                # ---------------------------------------------------
+                open_batch = Batch.objects.filter(
+                    product_id=incoming_uuid,
+                    tenant_id=DEFAULT_TENANT,
+                    opened_units__gt=0,
+                    is_depleted=False,
+                ).order_by("expiration_date", "entry_date").first()
+
+                if open_batch:
+                    # Consumir UNA unidad de la unidad abierta
+                    open_batch.opened_units = 0
+                    open_batch.opened_at = None
+                    open_batch.open_expires_at = None
+
+                    # También restamos 1 unidad del lote
+                    if open_batch.quantity > 0:
+                        open_batch.quantity -= 1
+                        if open_batch.quantity == 0:
+                            open_batch.is_depleted = True
+                            open_batch.depleted_at = now()
+
+                    open_batch.save()
+
+                    # Registrar movimiento
+                    loc_final = location or open_batch.product.location
+                    Movement.objects.create(
+                        product=open_batch.product,
+                        location=loc_final,
+                        quantity=-1,
+                        movement_type="OUT",
+                        metadata={"opened_batch_consumed": open_batch.id},
+                        tenant_id=DEFAULT_TENANT,
+                    )
+
+                    stock_remaining = Batch.objects.filter(
+                        product=open_batch.product, tenant_id=DEFAULT_TENANT
+                    ).aggregate(t=Coalesce(Sum("quantity"), 0))["t"] or 0
+
+                    return Response(
+                        {
+                            "ok": True,
+                            "detail": "Unidad abierta consumida",
+                            "batch_id": open_batch.id,
+                            "requested": 1,
+                            "stock_remaining": int(stock_remaining),
+                            "payload": open_batch.product.qr_payload,
+                        },
+                        status=200,
+                    )
+
+
+                # ---------------------------------------------------
+                # 2) Si NO se marcó “abrir” → continuar flujo usual
+                # ---------------------------------------------------
+
+
                 if not incoming_uuid:
                     return Response(
                         {"detail": "Payload inválido (se espera PRD:<uuid>)"}, status=400
@@ -416,16 +587,26 @@ class ScanEndpoint(APIView):
 
                 data = []
                 for p in products:
+                    # Recuperamos TODOS los campos que el frontend necesita
                     all_batches = list(
                         p.batches.values(
-                            "id", "quantity", "expiration_date"
+                            "id",
+                            "quantity",
+                            "expiration_date",
+                            "opened_units",
+                            "opened_at",
+                            "open_expires_at",
                         ).order_by("expiration_date")
                     )
+
+                    # Solo lotes con cantidad > 0
                     non_empty_batches = [
                         b for b in all_batches if int(b.get("quantity") or 0) > 0
                     ]
 
-                    total_qty = sum(int(b["quantity"]) for b in non_empty_batches)
+                    total_qty = sum(
+                        int(b["quantity"]) for b in non_empty_batches
+                    )
 
                     nearest_exp = min(
                         (
@@ -441,11 +622,8 @@ class ScanEndpoint(APIView):
                             "product": p.name,
                             "total_quantity": total_qty,
                             "nearest_expiration": nearest_exp,
-                            "batches": list(
-                                p.batches.filter(quantity__gt=0)
-                                .values("id", "quantity", "expiration_date")
-                                .order_by("expiration_date")
-                            ),
+                            # Mandamos los lotes tal cual los hemos calculado
+                            "batches": non_empty_batches,
                         }
                     )
 
@@ -460,6 +638,8 @@ class ScanEndpoint(APIView):
                     },
                     status=200,
                 )
+
+
 
             # -------------------------------------------------------
             # AUDITORÍA TOTAL (INVENTARIO COMPLETO)
@@ -483,9 +663,15 @@ class ScanEndpoint(APIView):
                     for p in products:
                         all_batches = list(
                             p.batches.values(
-                                "id", "quantity", "expiration_date"
+                                "id",
+                                "quantity",
+                                "expiration_date",
+                                "opened_units",
+                                "opened_at",
+                                "open_expires_at",
                             ).order_by("expiration_date")
                         )
+
                         non_empty_batches = [
                             b for b in all_batches if int(b.get("quantity") or 0) > 0
                         ]

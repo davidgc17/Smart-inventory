@@ -85,3 +85,5 @@ Cocina / Armario 1 / Caja Roja
 
 Desarrollado por **David García**.  
 📦 Proyecto en evolución — primeras pruebas funcionales completadas (Fase 3).
+
+REVISA LA CARPETA DOCS PARA DETALLES MAS TÉCNICOS

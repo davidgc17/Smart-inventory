@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>{{ product.name }}</h2>
+
+{% if auto_consumed %}
+    <p>Se ha extraído 1 unidad automáticamente.</p>
+{% else %}
+    <p>Acción realizada correctamente.</p>
+{% endif %}
+
+<p><strong>Unidades restantes del lote:</strong> {{ batch.quantity }}</p>
+<p><strong>Caducidad del lote:</strong> {{ batch.expiration_date }}</p>
+
+{% if batch.has_open_unit %}
+    <p><strong>Este lote tiene una unidad abierta.</strong><br>
+       Caduca tras abrir: {{ batch.open_expires_at }}
+    </p>
+{% endif %}
+
+<a href="{% url 'scan' %}" class="btn btn-primary mt-3">Volver al escaneo</a>
+{% endblock %}

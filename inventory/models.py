@@ -6,6 +6,8 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 from django.utils.text import slugify
+from django.utils import timezone
+from datetime import datetime, timedelta
 
 
 # =========================
@@ -57,6 +59,14 @@ def normalize_name(s: str) -> str:
 # =========================
 
 class Location(models.Model):
+    public_id = models.UUIDField(
+        default=uuid.uuid4,
+        editable=False,
+        null=True,
+        blank=True,
+        db_index=True,
+    )
+
     name = models.CharField(max_length=255)
     tenant_id = models.UUIDField(
         default=DEFAULT_TENANT,
@@ -179,8 +189,21 @@ class Product(models.Model):
     )
     nfc_tag_uid = models.CharField(max_length=64, blank=True)
 
+    # Fechas “globales” del producto
     expiration_date = models.DateField(null=True, blank=True)
     consumption_date = models.DateField(null=True, blank=True)
+
+    #control opcional de etapa “abierto”
+    track_open_state = models.BooleanField(
+        default=False,
+        help_text="Si está activo, este producto tiene etapa de ‘abierto’ con segunda caducidad."
+    )
+    default_open_shelf_life_days = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Días que dura tras abrir (p. ej. 7). Se usa si no se indican días manualmente."
+    )
+
     notes = models.TextField(blank=True, null=True)
 
     location = models.ForeignKey(
@@ -280,6 +303,7 @@ class Product(models.Model):
             self.qr_image.save(filename, content, save=True)
 
 
+
 # =========================
 #  Movement
 # =========================
@@ -349,13 +373,29 @@ class Batch(models.Model):
     )
     quantity = models.PositiveIntegerField(default=0)
     entry_date = models.DateField(auto_now_add=True)
+    # Caducidad “cerrado” del lote
     expiration_date = models.DateField(null=True, blank=True)
     notes = models.TextField(blank=True, null=True)
 
+    # === Gestión de unidades abiertas dentro del lote ===
+    # nº de unidades abiertas en este lote (normalmente 0 o 1)
+    opened_units = models.PositiveIntegerField(default=0)
+    # cuándo se abrió la unidad actual
+    opened_at = models.DateTimeField(null=True, blank=True)
+    # hasta cuándo es válida esa unidad tras abrir
+    open_expires_at = models.DateTimeField(null=True, blank=True)
+
+    # Estado de agotamiento del lote
     depleted_at = models.DateTimeField(null=True, blank=True)
     is_depleted = models.BooleanField(default=False, db_index=True)
 
     objects = TenantManager()
+
+    # Constantes de acción para el escaneo
+    ACTION_AUTO_CONSUME = "AUTO_CONSUME"
+    ACTION_CONSUME_OPEN = "CONSUME_OPEN"
+    ACTION_ASK_OPEN_OR_CONSUME = "ASK_OPEN_OR_CONSUME"
+    ACTION_NO_STOCK = "NO_STOCK"
 
     class Meta:
         ordering = ["entry_date"]
@@ -368,3 +408,174 @@ class Batch(models.Model):
 
     def __str__(self):
         return f"Lote de {self.product.name} ({self.quantity} uds, {self.entry_date})"
+    
+    def decide_action(self):
+        """
+        Devuelve una de las acciones posibles para este lote
+        cuando el usuario escanea un producto en modo SALIDA.
+        """
+        if self.quantity <= 0:
+            return Batch.ACTION_NO_STOCK
+
+        # Si ya hay una unidad abierta → siempre consumirla
+        if self.opened_units == 1:
+            return Batch.ACTION_CONSUME_OPEN
+
+        # Si no hay unidad abierta → preguntar al usuario
+        return Batch.ACTION_ASK_OPEN_OR_CONSUME
+
+
+    # ========= Helpers de estado =========
+
+    @property
+    def available_units(self) -> int:
+        """
+        Unidades disponibles en este lote.
+        Ahora mismo es simplemente 'quantity'.
+        """
+        return self.quantity
+
+    @property
+    def has_open_unit(self) -> bool:
+        """
+        Indica si hay al menos una unidad abierta en este lote.
+        En el flujo normal será 0 o 1.
+        """
+        return self.opened_units > 0
+
+    @property
+    def effective_expiry(self):
+        """
+        Fecha real para avisos:
+        - Si hay bote abierto → mínima entre caducidad cerrada y caducidad tras abrir
+        - Si no, usar caducidad normal
+        """
+        dates = []
+
+        if self.expiration_date:
+            dates.append(
+                timezone.make_aware(
+                    datetime.combine(self.expiration_date, datetime.min.time())
+                )
+            )
+        if self.open_expires_at:
+            dates.append(self.open_expires_at)
+
+        if not dates:
+            return None
+
+        return min(dates)
+
+    # ========= Acciones sobre el lote =========
+
+    def consume_one(self, *, mark_depleted: bool = True, save: bool = True):
+        """
+        Consume 1 unidad del lote.
+
+        - Si la unidad consumida era la abierta, limpia el estado de apertura.
+        - Si el lote se queda a 0 y mark_depleted=True, se marca como agotado.
+        """
+        if self.quantity <= 0:
+            raise ValueError("No hay unidades disponibles en este lote para consumir.")
+
+        # Restamos una unidad
+        self.quantity -= 1
+
+        # Si había unidades abiertas, asumimos que consumimos la abierta
+        if self.has_open_unit:
+            self.opened_units -= 1
+            if self.opened_units <= 0:
+                self.opened_units = 0
+                self.opened_at = None
+                self.open_expires_at = None
+
+        # Si ya no quedan unidades en el lote, lo marcamos como agotado
+        if self.quantity == 0 and mark_depleted:
+            self.is_depleted = True
+            self.depleted_at = timezone.now()
+
+        if save:
+            self.save()
+
+    def open_one(self, *, shelf_life_days: int, now=None, save: bool = True):
+        """
+        Marca 1 unidad de este lote como abierta y le asigna una caducidad 'tras abrir'.
+
+        Reglas:
+        - Solo se puede abrir si hay unidades disponibles.
+        - Solo tiene sentido si el producto tiene track_open_state=True.
+        - Se permite 1 unidad abierta por lote (por ahora).
+        """
+        if self.quantity <= 0:
+            raise ValueError("No se puede abrir un bote de un lote sin unidades.")
+
+        if not getattr(self.product, "track_open_state", False):
+            raise ValueError("Este producto no tiene etapa de apertura activada.")
+
+        if shelf_life_days <= 0:
+            raise ValueError("Los días de vida tras abrir deben ser > 0.")
+
+        if now is None:
+            now = timezone.now()
+
+        if self.has_open_unit:
+            # Hay que decidir en la vista qué hacer antes de llegar aquí,
+            # abrir un segundo bote del mismo lote sin control es mala idea.
+            raise ValueError("Este lote ya tiene un bote abierto.")
+
+        self.opened_units = 1
+        self.opened_at = now
+        self.open_expires_at = now + timedelta(days=shelf_life_days)
+
+        if save:
+            self.save()
+
+    # ========= Lógica de escaneo (QR) =========
+
+    @classmethod
+    def choose_for_scan(cls, product, tenant_id):
+        """
+        Decide qué hacer al escanear el QR de un producto:
+
+        - Si product.track_open_state es False:
+            → AUTO_CONSUME sobre el lote más antiguo con stock.
+
+        - Si product.track_open_state es True:
+            1) Si hay una unidad abierta en algún lote:
+                → CONSUME_OPEN sobre ese lote.
+            2) Si no hay abiertas pero sí stock:
+                → ASK_OPEN_OR_CONSUME sobre el lote más antiguo con stock.
+            3) Si no hay stock:
+                → NO_STOCK.
+
+        Devuelve (action, batch) donde batch puede ser None si no hay stock.
+        """
+        qs = cls.objects.filter(
+            tenant_id=tenant_id,
+            product=product,
+            is_depleted=False,
+            quantity__gt=0,
+        ).order_by("expiration_date", "entry_date", "id")
+
+        if not qs.exists():
+            return cls.ACTION_NO_STOCK, None
+
+        # Caso 1: producto sin etapa de apertura
+        if not getattr(product, "track_open_state", False):
+            return cls.ACTION_AUTO_CONSUME, qs.first()
+
+        # Caso 2: producto con etapa abierto/cerrado
+
+        # 2.1) ¿Hay alguna unidad abierta en algún lote?
+        open_batch = qs.filter(opened_units__gt=0).order_by(
+            "open_expires_at", "expiration_date"
+        ).first()
+        if open_batch:
+            return cls.ACTION_CONSUME_OPEN, open_batch
+
+        # 2.2) No hay unidades abiertas pero sí stock → preguntar
+        target_batch = qs.first()
+        if not target_batch:
+            return cls.ACTION_NO_STOCK, None
+
+        return cls.ACTION_ASK_OPEN_OR_CONSUME, target_batch

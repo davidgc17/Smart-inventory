@@ -55,13 +55,14 @@
         <select id="loc" class="w-full border border-gray-300 rounded px-3 py-2">
           <option value="" disabled selected>--- Elige ubicación ---</option>
           {% for loc in locations %}
-            <!-- value = UUID, texto = ruta completa -->
-            <option value="{{ loc.id }}">{{ loc.path }}</option>
+            <!-- value = public_id (UUID), texto = ruta completa -->
+            <option value="{{ loc.public_id }}">{{ loc.path }}</option>
           {% empty %}
             <option disabled>No hay ubicaciones disponibles</option>
           {% endfor %}
         </select>
       </div>
+
 
       <div>
         <label for="mtype" class="block font-medium">Tipo</label>
@@ -72,6 +73,25 @@
           <option value="AUD">Auditoría</option>
           <option value="AUDTOTAL">Auditoría total</option>
         </select>
+      </div>
+
+
+      <div id="open-options" class="space-y-3 hidden">
+
+        <div class="flex items-center gap-2">
+          <input type="checkbox" id="mark_open" class="h-4 w-4">
+          <label for="mark_open" class="font-medium">Marcar como abierto</label>
+        </div>
+
+        <div>
+          <label for="open_days" class="block font-medium">Días de vida tras abrir</label>
+          <input id="open_days"
+                type="number"
+                min="1"
+                class="w-full border border-gray-300 rounded px-3 py-2"
+                placeholder="Ej: 7 para caducar en 7 días" />
+        </div>
+
       </div>
 
       <!-- Campos adicionales SOLO cuando tipo = Entrada -->
@@ -106,6 +126,9 @@
         <label for="qty" class="block font-medium">Cantidad</label>
         <input id="qty" type="number" value="1" min="1" class="w-full border border-gray-300 rounded px-3 py-2" />
       </div>
+
+
+
 
       <button class="w-full bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition">Enviar</button>
     </form>
@@ -178,7 +201,7 @@
           const loc = (locationSelect && locationSelect.value) ? locationSelect.value.trim() : '';
           if (loc) params.set('location', loc);
 
-          const res = await fetch(`/products/search/?${params.toString()}`, { signal: lastController.signal });
+          const res = await fetch(`/api/products/search/?${params.toString()}`, { signal: lastController.signal });
           if (!res.ok) throw new Error('HTTP ' + res.status);
           return await res.json();
         } catch (_e) {
@@ -301,11 +324,14 @@
       }
 
       const body = {
-        payload: payloadRaw,
-        quantity: document.getElementById('qty').value || 1,
-        location: document.getElementById('loc').value || '',
-        movement_type: mtype,
+          payload: payloadRaw,
+          quantity: document.getElementById('qty').value || 1,
+          location: document.getElementById('loc').value || '',
+          movement_type: mtype,
+          mark_open: document.getElementById("mark_open")?.checked || false,
+          open_days: document.getElementById("open_days")?.value || null,
       };
+
 
       if (mtype === 'IN') {
         body.new_product = {
@@ -371,8 +397,15 @@
             `;
             (loc.items || []).forEach(it => {
               const lotes = it.batches?.length
-                ? it.batches.map(b => `#${b.id} (${b.quantity}u, ${b.expiration_date || '-'})`).join("<br>")
+                ? it.batches.map(b => {
+                    const openedInfo = (b.opened_units && b.opened_units > 0)
+                      ? ` — ${b.opened_units} abierta${b.opened_units > 1 ? 's' : ''}` +
+                        (b.open_expires_at ? ` (hasta ${b.open_expires_at})` : '')
+                      : '';
+                    return `#${b.id} (${b.quantity}u, ${b.expiration_date || '-'})${openedInfo}`;
+                  }).join("<br>")
                 : '<span class="text-gray-400 italic">Sin lotes</span>';
+
               html += `
                 <tr class="hover:bg-gray-50">
                   <td class="border px-3 py-2 font-medium">${it.product}</td>
@@ -432,6 +465,25 @@
 
         // SALIDA (OUT) — mostrar detalle de lotes consumidos si la petición fue OK (render SOLO en #out-section)
         if (mtype === 'OUT') {
+          // 2.1 — Acción OPENED (marcar como abierto)
+          if (data && data.action === "OPENED") {
+            $OUT().innerHTML = `
+              <div class="p-4 bg-yellow-50 border border-yellow-200 rounded mb-4">
+                <div class="font-semibold text-yellow-800">
+                  ✅ ${data.detail}
+                </div>
+                <div class="mt-2 text-sm text-yellow-900 space-y-1">
+                  <p><b>Lote abierto:</b> #${data.batch_id}</p>
+                  <p><b>Caduca tras abrir:</b> ${
+                    data.open_expires_at ? data.open_expires_at : "—"
+                  }</p>
+                </div>
+              </div>
+            `;
+            return;
+          }
+
+
           if (data && data.ok) {
             const rows = (data.consumed_batches || []).map(cb => `
               <tr class="hover:bg-gray-50">
@@ -493,9 +545,22 @@
         // AUD — render SOLO en #audit-section
         if (mtype === "AUD" && data && data.items) {
           const rows = data.items.map(item => {
-            const lotes = item.batches.map(
-              b => `<li>Lote #${b.id} — ${b.quantity} u. ${b.expiration_date ? `(${b.expiration_date})` : ''}</li>`
-            ).join("");
+            const lotes = item.batches.map(b => {
+              const openInfo = (b.opened_units && b.opened_units > 0)
+                ? ` ⭐ abierto${b.opened_units > 1 ? "s" : ""}` +
+                  (b.open_expires_at ? ` (hasta ${b.open_expires_at})` : "")
+                : "";
+
+              return `
+                <li>
+                  Lote #${b.id}
+                  — ${b.quantity} u.
+                  ${b.expiration_date ? `(caduca: ${b.expiration_date})` : ""}
+                  ${openInfo}
+                </li>
+              `;
+            }).join("");
+
             return `
               <tr>
                 <td class="border px-3 py-2 font-medium">${item.product}</td>
@@ -530,16 +595,16 @@
         }
 
       } catch (e) {
-        const mtypeNow = document.getElementById('mtype').value;
-        const target = (mtypeNow === 'AUD' || mtypeNow === 'AUDTOTAL') ? $AUD() : $OUT();
+        // Error de red o excepción inesperada durante el envío/procesado
+        const target = (mtype === 'AUD' || mtype === 'AUDTOTAL') ? $AUD() : $OUT();
         target.innerHTML = `
           <div class="p-4 bg-red-50 border border-red-200 rounded">
-            <div class="font-semibold text-red-700">❌ Error de red</div>
-            <div class="text-sm text-red-700 mt-1">${String(e)}</div>
-          </div>
-        `;
+            <div class="font-semibold text-red-700">Error de red</div>
+            <pre class="mt-2 text-xs text-gray-600 overflow-x-auto">${String(e)}</pre>
+          </div>`;
       }
-    }
+
+    } // fin function enviar
 
     // ---- Lector QR / Cámara ----
     let html5Qr; let cameras = []; let currentCamIndex = 0; let lastText = null;
@@ -662,6 +727,22 @@
       // Mostrar/ocultar campos de Entrada
       const tipoSelect = document.getElementById('mtype');
       const extraForm = document.getElementById('entrada-extra');
+      const openOptions = document.getElementById('open-options');
+
+      function updateVisibility() {
+          const t = tipoSelect.value;
+
+          // Mostrar solo si tipo = IN
+          if (t === 'IN') extraForm.classList.remove('hidden');
+          else extraForm.classList.add('hidden');
+
+          // Mostrar solo si tipo = OUT
+          if (t === 'OUT') openOptions.classList.remove('hidden');
+          else openOptions.classList.add('hidden');
+      }
+
+      tipoSelect.addEventListener('change', updateVisibility);
+      updateVisibility();
       const updateExtra = () => {
         if (tipoSelect.value === 'IN') extraForm.classList.remove('hidden');
         else extraForm.classList.add('hidden');
@@ -692,6 +773,29 @@
         startScanner();
       }, 100);
     });
+
+    document.addEventListener("DOMContentLoaded", () => {
+        const chk = document.getElementById("mark_open");
+        const div = document.getElementById("open-days-wrapper");
+
+        if (chk) {
+            chk.addEventListener("change", () => {
+                if (chk.checked) div.classList.remove("hidden");
+                else div.classList.add("hidden");
+            });
+        }
+    });
+
+    const markOpenEl = document.getElementById("mark_open");
+    const openDaysBlock = document.getElementById("open_days_block");
+
+    if (markOpenEl) {
+        markOpenEl.addEventListener("change", () => {
+            if (markOpenEl.checked) openDaysBlock.classList.remove("hidden");
+            else openDaysBlock.classList.add("hidden");
+        });
+    }
+
 
   </script>
 </body>

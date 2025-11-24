@@ -8,6 +8,10 @@ from .models import Product, Movement, Location
 from django.contrib import messages
 import json
 
+
+def home_view(request):
+    return render(request, "inventory/home.html")
+
 def locations_manager(request):
     return render(request, "inventory/location_manager.html")
 
@@ -55,6 +59,7 @@ def scan_view(request):
             "units": units,
         },
     )
+
 
 def scan_qr_view(request):
     """

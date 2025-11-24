@@ -1,0 +1,130 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>{% block title %}Smart Inventory{% endblock %}</title>
+
+    {# ❌ De momento NO dependemos de este CSS compilado #}
+    {# <link rel="stylesheet" href="{% static 'css/output.css' %}"> #}
+
+    {# ✅ Cargamos Tailwind desde CDN #}
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+      // Configuración rápida del tema azul verdoso tranquilo
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                bg: '#0f172a',      // fondo header (slate muy oscuro)
+                soft: '#0f766e',    // teal suave para botones
+                softHover: '#115e59',
+                accent: '#22c55e',  // detalles/éxito
+              },
+            },
+          },
+        },
+      }
+    </script>
+
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body class="min-h-screen bg-cyan-50 text-slate-900 antialiased flex flex-col">
+
+    <!-- Header + Navbar -->
+    <header class="bg-white border-b border-slate-200 shadow-sm">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+
+            <!-- Branding -->
+            <div class="flex items-center gap-3">
+                <div class="h-8 w-8 rounded-md bg-teal-600 text-white flex items-center justify-center font-semibold shadow-sm">
+                    SI
+                </div>
+                <div class="flex flex-col leading-tight">
+                    <p class="text-sm font-semibold tracking-tight text-slate-900">
+                        Smart Inventory
+                    </p>
+                    <p class="text-[11px] text-teal-700">
+                        Control de stock en casa y oficina
+                    </p>
+                </div>
+            </div>
+
+            <!-- Navbar escritorio -->
+            <nav class="hidden md:flex items-center gap-4 text-sm font-medium">
+                <a href="{% url 'home' %}"
+                   class="px-2 py-1 rounded-lg hover:bg-teal-50 text-teal-700">
+                    Inicio
+                </a>
+                <a href="{% url 'scan' %}"
+                   class="px-2 py-1 rounded-lg hover:bg-teal-50 text-teal-700">
+                    Inventario
+                </a>
+                <a href="{% url 'locations-manager' %}"
+                   class="px-2 py-1 rounded-lg hover:bg-teal-50 text-teal-700">
+                    Ubicaciones
+                </a>
+            </nav>
+
+            <!-- Toggle móvil -->
+            <div class="md:hidden" x-data="{ open: false }">
+                <button @click="open = !open"
+                        class="p-2 rounded-md border border-teal-200 text-teal-700 hover:bg-teal-50">
+                    <!-- Icono hamburguesa -->
+                    <svg x-show="!open" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
+                         viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+
+                    <!-- Icono cerrar -->
+                    <svg x-show="open" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
+                         viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+
+                <!-- Menú desplegable -->
+                <div x-show="open" x-transition
+                     class="mt-3 space-y-2 bg-white border border-slate-200 rounded-lg p-3 shadow-md">
+
+                    <a href="{% url 'home' %}"
+                       class="block px-2 py-1 rounded-lg hover:bg-teal-50 text-teal-700">
+                        Inicio
+                    </a>
+                    <a href="{% url 'scan' %}"
+                       class="block px-2 py-1 rounded-lg hover:bg-teal-50 text-teal-700">
+                        Inventario
+                    </a>
+                    <a href="{% url 'locations-manager' %}"
+                       class="block px-2 py-1 rounded-lg hover:bg-teal-50 text-teal-700">
+                        Ubicaciones
+                    </a>
+
+                    <!-- Futuro -->
+                    <span class="block px-2 py-1 rounded-lg text-slate-400 cursor-not-allowed">
+                        Analytics (próximamente)
+                    </span>
+                    <span class="block px-2 py-1 rounded-lg text-slate-400 cursor-not-allowed">
+                        Ajustes (próximamente)
+                    </span>
+                </div>
+            </div>
+
+        </div>
+    </header>
+
+    <!-- CONTENIDO -->
+    <main class="flex-1 py-6">
+        {% block content %}{% endblock %}
+    </main>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

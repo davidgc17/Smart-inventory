@@ -1,826 +1,788 @@
+{% extends "inventory/base.html" %}
 {% load static %}
-<!doctype html>
-<html lang="es">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Escaneo (cámara + manual)</title>
+{% block title %}Escaneo (cámara + manual) · Smart Inventory{% endblock %}
 
-  <!-- Librerías externas -->
-  <link href="{% static 'css/output.css' %}" rel="stylesheet">
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" 
-          onerror="this.onerror=null; this.src='https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js'"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
-</head>
+{% block content %}
+<div class="max-w-3xl mx-auto bg-[#d6ecec] rounded-xl p-6 shadow-md border border-[#c3dede]">
 
-<body class="font-sans bg-gray-100 p-6">
-  <div class="max-w-xl mx-auto bg-white shadow-md rounded-xl p-6 space-y-6">
+  <h1 class="text-3xl font-bold text-center text-teal-700">¡Escaneo (cámara + manual)!</h1>
 
-    <h1 class="text-3xl font-bold text-center text-blue-600">¡Escaneo (cámara + manual)!</h1>
+  <!-- Sección Cámara -->
+  <h2 class="text-xl font-semibold text-slate-900">Cámara</h2>
+  <div class="flex flex-wrap items-center gap-4 mb-4">
+    <button id="switchBtn" type="button"
+            class="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition">
+      Cambiar cámara
+    </button>
+    <span id="cam-status" class="text-sm text-slate-700">Esperando permisos de la cámara…</span>
+  </div>
+  <div id="reader" class="w-full max-w-sm h-64 border border-slate-300 rounded bg-white"></div>
 
-    <!-- Sección Cámara -->
-    <h2 class="text-xl font-semibold">Cámara</h2>
-    <div class="flex flex-wrap items-center gap-4 mb-4">
-      <button id="switchBtn" type="button" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed">
-        Cambiar cámara
-      </button>
-      <span id="cam-status" class="text-sm text-gray-700">Esperando permisos de la cámara…</span>
-    </div>
-    <div id="reader" class="w-full max-w-sm h-64 border border-gray-300 rounded bg-white"></div>
+  <!-- Formulario manual -->
+  <h2 class="text-xl font-semibold mt-6 text-slate-900">Formulario manual</h2>
+  <form onsubmit="event.preventDefault(); enviar();" class="space-y-4">
+    {% csrf_token %}
 
-    <!-- Formulario manual -->
-    <h2 class="text-xl font-semibold mt-6">Formulario manual</h2>
-    <form onsubmit="event.preventDefault(); enviar();" class="space-y-4">
-      {% csrf_token %}
-
-      <!-- 🔎 Buscador con autocompletado -->
-      <div>
-        <label for="productSearch" class="block font-medium">Buscar producto</label>
-        <input id="productSearch" class="w-full border border-gray-300 rounded px-3 py-2"
-               placeholder="Escribe nombre, SKU o PRD..."
-               list="productSearchResults" autocomplete="off" />
-        <datalist id="productSearchResults"></datalist>
-        <p class="text-xs text-gray-500 mt-1">
-          Al seleccionar una sugerencia se rellenará el campo Payload automáticamente.
-        </p>
-      </div>
-
-      <div>
-        <label for="payload" class="block font-medium">Payload (PRD:&lt;uuid&gt;)</label>
-        <input id="payload" class="w-full border border-gray-300 rounded px-3 py-2" />
-      </div>
-
-      <div>
-        <label for="loc" class="block font-medium">Ubicación</label>
-        <select id="loc" class="w-full border border-gray-300 rounded px-3 py-2">
-          <option value="" disabled selected>--- Elige ubicación ---</option>
-          {% for loc in locations %}
-            <!-- value = public_id (UUID), texto = ruta completa -->
-            <option value="{{ loc.public_id }}">{{ loc.path }}</option>
-          {% empty %}
-            <option disabled>No hay ubicaciones disponibles</option>
-          {% endfor %}
-        </select>
-      </div>
-
-
-      <div>
-        <label for="mtype" class="block font-medium">Tipo</label>
-        <select id="mtype" class="w-full border border-gray-300 rounded px-3 py-2">
-          <option value="OUT">Salida</option>
-          <option value="IN">Entrada</option>
-          <option value="ADJ">Ajuste</option>
-          <option value="AUD">Auditoría</option>
-          <option value="AUDTOTAL">Auditoría total</option>
-        </select>
-      </div>
-
-
-      <div id="open-options" class="space-y-3 hidden">
-
-        <div class="flex items-center gap-2">
-          <input type="checkbox" id="mark_open" class="h-4 w-4">
-          <label for="mark_open" class="font-medium">Marcar como abierto</label>
-        </div>
-
-        <div>
-          <label for="open_days" class="block font-medium">Días de vida tras abrir</label>
-          <input id="open_days"
-                type="number"
-                min="1"
-                class="w-full border border-gray-300 rounded px-3 py-2"
-                placeholder="Ej: 7 para caducar en 7 días" />
-        </div>
-
-      </div>
-
-      <!-- Campos adicionales SOLO cuando tipo = Entrada -->
-      <div id="entrada-extra" class="space-y-4 hidden mt-4">
-        <div>
-          <label for="new_name" class="block font-medium">Nombre del producto</label>
-          <input id="new_name" class="w-full border border-gray-300 rounded px-3 py-2" />
-        </div>
-        <div>
-          <label for="new_category" class="block font-medium">Categoría</label>
-          <input id="new_category" class="w-full border border-gray-300 rounded px-3 py-2" />
-        </div>
-        <div>
-          <label for="new_unit" class="block font-medium">Unidad</label>
-          <input id="new_unit" class="w-full border border-gray-300 rounded px-3 py-2" />
-        </div>
-        <div>
-          <label for="new_min_stock" class="block font-medium">Stock mínimo</label>
-          <input id="new_min_stock" type="number" class="w-full border border-gray-300 rounded px-3 py-2" />
-        </div>
-        <div>
-          <label for="new_expiration_date" class="block font-medium">Fecha de caducidad</label>
-          <input id="new_expiration_date" type="date" class="w-full border border-gray-300 rounded px-3 py-2" />
-        </div>
-        <div>
-          <label for="new_notes" class="block font-medium">Notas</label>
-          <textarea id="new_notes" class="w-full border border-gray-300 rounded px-3 py-2"></textarea>
-        </div>
-      </div>
-
-      <div>
-        <label for="qty" class="block font-medium">Cantidad</label>
-        <input id="qty" type="number" value="1" min="1" class="w-full border border-gray-300 rounded px-3 py-2" />
-      </div>
-
-
-
-
-      <button class="w-full bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition">Enviar</button>
-    </form>
-
-    <!-- Resultados -->
-    <h3 class="text-lg font-semibold mt-6">Resultados:</h3>
-
-    <!-- Solo OUT (tarjeta & FIFO) + IN "bonito" -->
-    <section id="out-section"
-             class="mt-2 bg-gray-50 border border-gray-200 p-4 rounded min-h-[64px]"></section>
-
-    <!-- Solo AUD / AUDTOTAL -->
-    <section id="audit-section"
-             class="mt-4 bg-gray-50 border border-gray-200 p-4 rounded"></section>
-
-    <div id="qr-result" class="mt-4 hidden">
-      <h4 class="font-semibold">QR generado:</h4>
-      <canvas id="qr-canvas" class="border border-gray-300 rounded p-2 bg-white"></canvas>
-      <p class="text-sm text-gray-600 mt-1">Este código identifica el producto generado.</p>
+    <!-- 🔎 Buscador con autocompletado -->
+    <div>
+      <label for="productSearch" class="block font-medium text-slate-800">Buscar producto</label>
+      <input id="productSearch" class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+             placeholder="Escribe nombre, SKU o PRD..."
+             list="productSearchResults" autocomplete="off" />
+      <datalist id="productSearchResults"></datalist>
+      <p class="text-xs text-slate-500 mt-1">
+        Al seleccionar una sugerencia se rellenará el campo Payload automáticamente.
+      </p>
     </div>
 
+    <div>
+      <label for="payload" class="block font-medium text-slate-800">Payload (PRD:&lt;uuid&gt;)</label>
+      <input id="payload" class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+    </div>
+
+    <div>
+      <label for="loc" class="block font-medium text-slate-800">Ubicación</label>
+      <select id="loc" class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+        <option value="" disabled selected>--- Elige ubicación ---</option>
+        {% for loc in locations %}
+          <!-- value = public_id (UUID), texto = ruta completa -->
+          <option value="{{ loc.public_id }}">{{ loc.path }}</option>
+        {% empty %}
+          <option disabled>No hay ubicaciones disponibles</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label for="mtype" class="block font-medium text-slate-800">Tipo</label>
+      <select id="mtype" class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+        <option value="OUT">Salida</option>
+        <option value="IN">Entrada</option>
+        <option value="ADJ">Ajuste</option>
+        <option value="AUD">Auditoría</option>
+        <option value="AUDTOTAL">Auditoría total</option>
+      </select>
+    </div>
+
+    <div id="open-options" class="space-y-3 hidden">
+      <div class="flex items-center gap-2">
+        <input type="checkbox" id="mark_open" class="h-4 w-4">
+        <label for="mark_open" class="font-medium text-slate-800">Marcar como abierto</label>
+      </div>
+
+      <div>
+        <label for="open_days" class="block font-medium text-slate-800">Días de vida tras abrir</label>
+        <input id="open_days"
+              type="number"
+              min="1"
+              class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+              placeholder="Ej: 7 para caducar en 7 días" />
+      </div>
+    </div>
+
+    <!-- Campos adicionales SOLO cuando tipo = Entrada -->
+    <div id="entrada-extra" class="space-y-4 hidden mt-4">
+      <div>
+        <label for="new_name" class="block font-medium text-slate-800">Nombre del producto</label>
+        <input id="new_name" class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+      </div>
+      <div>
+        <label for="new_category" class="block font-medium text-slate-800">Categoría</label>
+        <input id="new_category" class="w-full border border-slate-300 rounded px-3 py-2" />
+      </div>
+      <div>
+        <label for="new_unit" class="block font-medium text-slate-800">Unidad</label>
+        <input id="new_unit" class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+      </div>
+      <div>
+        <label for="new_min_stock" class="block font-medium text-slate-800">Stock mínimo</label>
+        <input id="new_min_stock" type="number" class="w-full border border-slate-300 rounded px-3 py-2" />
+      </div>
+      <div>
+        <label for="new_expiration_date" class="block font-medium text-slate-800">Fecha de caducidad</label>
+        <input id="new_expiration_date" type="date" class="w-full border border-slate-300 rounded px-3 py-2" />
+      </div>
+      <div>
+        <label for="new_notes" class="block font-medium text-slate-800">Notas</label>
+        <textarea id="new_notes" class="w-full border border-slate-300 rounded px-3 py-2"></textarea>
+      </div>
+    </div>
+
+    <div>
+      <label for="qty" class="block font-medium text-slate-800">Cantidad</label>
+      <input id="qty" type="number" value="1" min="1"
+             class="w-full border border-slate-300 rounded px-3 py-2" />
+    </div>
+
+    <button class="w-full bg-teal-600 text-white py-2 px-4 rounded hover:bg-teal-700 transition">
+      Enviar
+    </button>
+  </form>
+
+  <!-- Resultados -->
+  <h3 class="text-lg font-semibold mt-6 text-slate-900">Resultados:</h3>
+
+  <!-- Solo OUT (tarjeta & FIFO) + IN "bonito" -->
+  <section id="out-section"
+           class="mt-2 bg-slate-50 border border-slate-200 p-4 rounded min-h-[64px]"></section>
+
+  <!-- Solo AUD / AUDTOTAL -->
+  <section id="audit-section"
+           class="mt-4 bg-slate-50 border border-slate-200 p-4 rounded"></section>
+
+  <div id="qr-result" class="mt-4 hidden">
+    <h4 class="font-semibold text-slate-900">QR generado:</h4>
+    <canvas id="qr-canvas" class="border border-slate-300 rounded p-2 bg-white"></canvas>
+    <p class="text-sm text-slate-600 mt-1">Este código identifica el producto generado.</p>
   </div>
 
-  <!-- Scripts -->
-  <script>
-    // ---- Utilidades CSRF + helpers ----
-    function getCookie(name) {
-      const v = `; ${document.cookie}`;
-      const p = v.split(`; ${name}=`);
-      if (p.length === 2) return p.pop().split(';').shift();
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{# Librerías externas necesarias para el escáner y los QR #}
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"
+        onerror="this.onerror=null; this.src='https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js'"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+
+
+<script>
+// ---- Utilidades CSRF + helpers ----
+function getCookie(name) {
+  const v = `; ${document.cookie}`;
+  const p = v.split(`; ${name}=`);
+  if (p.length === 2) return p.pop().split(';').shift();
+}
+const csrftoken = getCookie('csrftoken');
+
+function validUUID(u) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(u);
+}
+
+// ---- Contenedores separados de render ----
+const $OUT = () => document.getElementById('out-section');
+const $AUD = () => document.getElementById('audit-section');
+
+function clearOUT() { $OUT().innerHTML = ''; }
+function clearAUD() { $AUD().innerHTML = ''; }
+
+// =============================
+// 🔎 AUTOCOMPLETADO DE PRODUCTOS
+// =============================
+(function initProductAutocomplete() {
+  const searchInput   = document.getElementById('productSearch');
+  const datalist      = document.getElementById('productSearchResults');
+  const payloadInput  = document.getElementById('payload');
+  const locationSelect= document.getElementById('loc');
+
+  // Mapa label -> payload
+  const optionMap = new Map();
+  let timer = null;
+  let lastController = null;
+
+  function debounce(fn, ms) {
+    clearTimeout(timer);
+    timer = setTimeout(fn, ms);
+  }
+
+  async function fetchResults(q) {
+    try {
+      if (lastController) lastController.abort();
+      lastController = new AbortController();
+
+      const params = new URLSearchParams({ q });
+      const loc = (locationSelect && locationSelect.value) ? locationSelect.value.trim() : '';
+      if (loc) params.set('location', loc);
+
+      const res = await fetch(`/api/products/search/?${params.toString()}`, { signal: lastController.signal });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return await res.json();
+    } catch (_e) {
+      return { results: [] };
     }
-    const csrftoken = getCookie('csrftoken');
+  }
 
-    function validUUID(u) {
-      return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(u);
+  function renderOptions(results) {
+    optionMap.clear();
+    datalist.innerHTML = results.map(r => {
+      const label = [r.name, r.location].filter(Boolean).join(' — ');
+      optionMap.set(label, r.payload);
+      return `<option value="${label}"></option>`;
+    }).join('');
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.trim();
+      if (!q) { datalist.innerHTML = ''; optionMap.clear(); return; }
+      debounce(async () => {
+        const json = await fetchResults(q);
+        renderOptions(json.results || []);
+      }, 250);
+    });
+
+    searchInput.addEventListener('change', () => {
+      const val = searchInput.value.trim();
+      if (optionMap.has(val)) {
+        payloadInput.value = optionMap.get(val); // PRD:...
+      }
+    });
+  }
+})();
+// =============================
+
+// ---- Envío de formulario ----
+async function enviar() {
+  const mtype = document.getElementById('mtype').value;
+
+  // Limpiar contenedores según tipo
+  if (mtype === 'OUT' || mtype === 'IN' || mtype === 'ADJ') clearOUT();
+  if (mtype === 'AUD' || mtype === 'AUDTOTAL') clearAUD();
+
+  const payloadRaw = (document.getElementById('payload').value || '').trim();
+
+  // Referencias a campos de Entrada (IN)
+  const newNameEl       = document.getElementById('new_name');
+  const newCategoryEl   = document.getElementById('new_category');
+  const newUnitEl       = document.getElementById('new_unit');
+  const newMinStockEl   = document.getElementById('new_min_stock');
+  const newNotesEl      = document.getElementById('new_notes');
+  const newExpDateEl    = document.getElementById('new_expiration_date');
+
+  // Reset visual de errores en campos de IN
+  if (newNameEl) {
+    newNameEl.classList.remove('border-red-500');
+    newNameEl.classList.add('border-gray-300');
+  }
+  if (newUnitEl) {
+    newUnitEl.classList.remove('border-red-500');
+    newUnitEl.classList.add('border-gray-300');
+  }
+
+  // Validación del payload según el tipo de movimiento
+  if (!['IN', 'AUD', 'AUDTOTAL'].includes(mtype)) {
+    // OUT y ADJ: payload PRD obligatorio
+    if (!payloadRaw.startsWith('PRD:')) { 
+      alert('El payload debe empezar por PRD:'); 
+      return; 
     }
+    const uuid = payloadRaw.slice(4).trim();
+    if (!validUUID(uuid)) { 
+      alert('UUID no válido.'); 
+      return; 
+    }
+  }
 
-    // ---- Contenedores separados de render ----
-    const $OUT = () => document.getElementById('out-section');
-    const $AUD = () => document.getElementById('audit-section');
+  // Validación específica para IN:
+  // Caso 1: IN con PRD:uuid válido -> se asume producto existente (nombre/unidad opcionales)
+  // Caso 2: IN sin PRD (o PRD mal formado) -> alta de producto nuevo -> nombre + unidad OBLIGATORIOS
+  if (mtype === 'IN') {
+    const maybeUuid = payloadRaw.startsWith('PRD:') ? payloadRaw.slice(4).trim() : '';
+    const hasValidPRD = maybeUuid && validUUID(maybeUuid);
 
-    function clearOUT() { $OUT().innerHTML = ''; }
-    function clearAUD() { $AUD().innerHTML = ''; }
+    if (!hasValidPRD) {
+      const newName = (newNameEl?.value || '').trim();
+      const newUnit = (newUnitEl?.value || '').trim();
+      let missing = [];
 
-    // =============================
-    // 🔎 AUTOCOMPLETADO DE PRODUCTOS
-    // =============================
-    (function initProductAutocomplete() {
-      const searchInput   = document.getElementById('productSearch');
-      const datalist      = document.getElementById('productSearchResults');
-      const payloadInput  = document.getElementById('payload');
-      const locationSelect= document.getElementById('loc');
-
-      // Mapa label -> payload
-      const optionMap = new Map();
-      let timer = null;
-      let lastController = null;
-
-      function debounce(fn, ms) {
-        clearTimeout(timer);
-        timer = setTimeout(fn, ms);
+      if (!newName) {
+        missing.push('nombre');
+        if (newNameEl) {
+          newNameEl.classList.remove('border-gray-300');
+          newNameEl.classList.add('border-red-500');
+        }
       }
-
-      async function fetchResults(q) {
-        try {
-          if (lastController) lastController.abort();
-          lastController = new AbortController();
-
-          const params = new URLSearchParams({ q });
-          const loc = (locationSelect && locationSelect.value) ? locationSelect.value.trim() : '';
-          if (loc) params.set('location', loc);
-
-          const res = await fetch(`/api/products/search/?${params.toString()}`, { signal: lastController.signal });
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          return await res.json();
-        } catch (_e) {
-          return { results: [] };
+      if (!newUnit) {
+        missing.push('unidad');
+        if (newUnitEl) {
+          newUnitEl.classList.remove('border-gray-300');
+          newUnitEl.classList.add('border-red-500');
         }
       }
 
-      function renderOptions(results) {
-        optionMap.clear();
-        datalist.innerHTML = results.map(r => {
-          const label = [r.name, r.location].filter(Boolean).join(' — ');
-          optionMap.set(label, r.payload);
-          return `<option value="${label}"></option>`;
-        }).join('');
-      }
-
-      if (searchInput) {
-        searchInput.addEventListener('input', () => {
-          const q = searchInput.value.trim();
-          if (!q) { datalist.innerHTML = ''; optionMap.clear(); return; }
-          debounce(async () => {
-            const json = await fetchResults(q);
-            renderOptions(json.results || []);
-          }, 250);
-        });
-
-        searchInput.addEventListener('change', () => {
-          const val = searchInput.value.trim();
-          if (optionMap.has(val)) {
-            payloadInput.value = optionMap.get(val); // PRD:...
-          }
-        });
-      }
-    })();
-    // =============================
-
-    // ---- Envío de formulario ----
-    async function enviar() {
-      const mtype = document.getElementById('mtype').value;
-
-      // Limpiar contenedores según tipo
-      if (mtype === 'OUT' || mtype === 'IN' || mtype === 'ADJ') clearOUT();
-      if (mtype === 'AUD' || mtype === 'AUDTOTAL') clearAUD();
-
-      const payloadRaw = (document.getElementById('payload').value || '').trim();
-
-      // Referencias a campos de Entrada (IN)
-      const newNameEl       = document.getElementById('new_name');
-      const newCategoryEl   = document.getElementById('new_category');
-      const newUnitEl       = document.getElementById('new_unit');
-      const newMinStockEl   = document.getElementById('new_min_stock');
-      const newNotesEl      = document.getElementById('new_notes');
-      const newExpDateEl    = document.getElementById('new_expiration_date');
-
-      // Reset visual de errores en campos de IN
-      if (newNameEl) {
-        newNameEl.classList.remove('border-red-500');
-        newNameEl.classList.add('border-gray-300');
-      }
-      if (newUnitEl) {
-        newUnitEl.classList.remove('border-red-500');
-        newUnitEl.classList.add('border-gray-300');
-      }
-
-      // Validación del payload según el tipo de movimiento
-      if (!['IN', 'AUD', 'AUDTOTAL'].includes(mtype)) {
-        // OUT y ADJ: payload PRD obligatorio
-        if (!payloadRaw.startsWith('PRD:')) { 
-          alert('El payload debe empezar por PRD:'); 
-          return; 
-        }
-        const uuid = payloadRaw.slice(4).trim();
-        if (!validUUID(uuid)) { 
-          alert('UUID no válido.'); 
-          return; 
-        }
-      }
-
-      // Validación específica para IN:
-      // Caso 1: IN con PRD:uuid válido -> se asume producto existente (nombre/unidad opcionales)
-      // Caso 2: IN sin PRD (o PRD mal formado) -> alta de producto nuevo -> nombre + unidad OBLIGATORIOS
-      if (mtype === 'IN') {
-        const maybeUuid = payloadRaw.startsWith('PRD:') ? payloadRaw.slice(4).trim() : '';
-        const hasValidPRD = maybeUuid && validUUID(maybeUuid);
-
-        if (!hasValidPRD) {
-          const newName = (newNameEl?.value || '').trim();
-          const newUnit = (newUnitEl?.value || '').trim();
-          let missing = [];
-
-          if (!newName) {
-            missing.push('nombre');
-            if (newNameEl) {
-              newNameEl.classList.remove('border-gray-300');
-              newNameEl.classList.add('border-red-500');
-            }
-          }
-          if (!newUnit) {
-            missing.push('unidad');
-            if (newUnitEl) {
-              newUnitEl.classList.remove('border-gray-300');
-              newUnitEl.classList.add('border-red-500');
-            }
-          }
-
-          if (missing.length) {
-            // Mensaje de error en la zona de resultados (OUT)
-            $OUT().innerHTML = `
-              <div class="p-4 bg-red-50 border border-red-200 rounded">
-                <div class="font-semibold text-red-700">Faltan campos obligatorios</div>
-                <div class="text-sm text-red-700 mt-1">
-                  Para una <b>entrada sin PRD</b> tienes que indicar como mínimo
-                  <b>nombre</b> y <b>unidad</b> del producto.
-                </div>
-              </div>
-            `;
-            return;
-          }
-        }
-      }
-
-      const body = {
-          payload: payloadRaw,
-          quantity: document.getElementById('qty').value || 1,
-          location: document.getElementById('loc').value || '',
-          movement_type: mtype,
-          mark_open: document.getElementById("mark_open")?.checked || false,
-          open_days: document.getElementById("open_days")?.value || null,
-      };
-
-
-      if (mtype === 'IN') {
-        body.new_product = {
-          name: newNameEl?.value || '',
-          category: newCategoryEl?.value || '',
-          unit: newUnitEl?.value || '',
-          min_stock: parseInt(newMinStockEl?.value || '0'),
-          notes: newNotesEl?.value || '',
-          expiration_date: newExpDateEl?.value || null,
-        };
-      }
-
-      try {
-        const res = await fetch('/api/scan/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-          credentials: 'same-origin',
-          body: JSON.stringify(body),
-        });
-
-        const raw = await res.text();
-        let data;
-        try { data = JSON.parse(raw); } catch { data = { non_json: true, raw }; }
-
-        const headersObj = {};
-        res.headers.forEach((v, k) => headersObj[k] = v);
-
-        // AUDITORÍA TOTAL — versión simplificada y fiable (render SOLO en #audit-section)
-        if (mtype === 'AUDTOTAL') {
-          const inv = data?.data?.inventory || data?.inventory || data?.data?.data?.inventory;
-          const total = data?.data?.total_locations || data?.total_locations || data?.data?.data?.total_locations;
-
-          if (!inv || !Array.isArray(inv)) {
-            $AUD().innerHTML = `
-              <div class="p-4 bg-red-100 text-red-700 rounded">
-                <strong>Error:</strong> No se pudo leer el inventario desde la respuesta del servidor.
-              </div>
-              <pre class="mt-2 text-xs text-gray-600 overflow-x-auto">${JSON.stringify(data, null, 2)}</pre>
-            `;
-            return;
-          }
-
-          let html = `
-            <h2 class="text-2xl font-bold text-blue-600 mb-3">📦 Auditoría total</h2>
-            <p class="text-sm text-gray-700 mb-6">Total de ubicaciones: <b>${total || inv.length}</b></p>
-          `;
-
-          inv.forEach(loc => {
-            html += `
-              <div class="border border-gray-300 rounded-lg p-4 mb-5 bg-gray-50">
-                <h3 class="text-lg font-semibold text-gray-800 mb-2">${loc.location}</h3>
-                <p class="text-sm text-gray-600 mb-3">Productos en esta ubicación: <b>${loc.total_products}</b></p>
-                <table class="w-full border-collapse text-sm bg-white rounded-lg overflow-hidden">
-                  <thead class="bg-gray-200 text-gray-800">
-                    <tr>
-                      <th class="border px-3 py-2 text-left">Producto</th>
-                      <th class="border px-3 py-2 text-center">Cantidad total</th>
-                      <th class="border px-3 py-2 text-center">Caducidad más próxima</th>
-                      <th class="border px-3 py-2 text-left">Lotes</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-            `;
-            (loc.items || []).forEach(it => {
-              const lotes = it.batches?.length
-                ? it.batches.map(b => {
-                    const openedInfo = (b.opened_units && b.opened_units > 0)
-                      ? ` — ${b.opened_units} abierta${b.opened_units > 1 ? 's' : ''}` +
-                        (b.open_expires_at ? ` (hasta ${b.open_expires_at})` : '')
-                      : '';
-                    return `#${b.id} (${b.quantity}u, ${b.expiration_date || '-'})${openedInfo}`;
-                  }).join("<br>")
-                : '<span class="text-gray-400 italic">Sin lotes</span>';
-
-              html += `
-                <tr class="hover:bg-gray-50">
-                  <td class="border px-3 py-2 font-medium">${it.product}</td>
-                  <td class="border px-3 py-2 text-center">${it.total_quantity}</td>
-                  <td class="border px-3 py-2 text-center">${it.nearest_expiration || '-'}</td>
-                  <td class="border px-3 py-2">${lotes}</td>
-                </tr>
-              `;
-            });
-            html += `
-                  </tbody>
-                </table>
-              </div>
-            `;
-          });
-
-          $AUD().innerHTML = html;
-          return;
-        }
-
-        // ENTRADA (IN) — QR + tarjeta bonita en OUT y salir
-        if (mtype === 'IN') {
-          // inner = datos reales de la API (por si vienen anidados en data.data)
-          const inner = (data && (data.payload !== undefined || data.detail !== undefined))
-                        ? data
-                        : (data && data.data) || data || {};
-
-          const qrValue = inner.payload || payloadRaw || '';
-          if (qrValue) {
-            const qrCanvas = document.getElementById('qr-canvas');
-            const qrContainer = document.getElementById('qr-result');
-            qrContainer.classList.remove('hidden');
-            new QRious({ element: qrCanvas, value: qrValue, size: 200, level: 'H' });
-          }
-
-          const detailText = inner.detail || 'Entrada registrada correctamente';
-          const shownPayload = inner.payload || payloadRaw || '(no disponible)';
-          const locText = body.location || '-';
-          const qtyText = body.quantity || 1;
-
-          $OUT().innerHTML = `
-            <div class="p-4 bg-blue-50 border border-blue-200 rounded mb-2">
-              <div class="font-semibold text-blue-800">
-                ✅ ${detailText}
-              </div>
-              <div class="mt-2 text-sm text-blue-900 space-y-1">
-                <p>Ubicación: <b>${locText}</b></p>
-                <p>Cantidad recibida: <b>${qtyText}</b></p>
-                <p>Payload / PRD:
-                  <code class="text-xs bg-blue-100 px-1 py-0.5 rounded">${shownPayload}</code>
-                </p>
-              </div>
+      if (missing.length) {
+        // Mensaje de error en la zona de resultados (OUT)
+        $OUT().innerHTML = `
+          <div class="p-4 bg-red-50 border border-red-200 rounded">
+            <div class="font-semibold text-red-700">Faltan campos obligatorios</div>
+            <div class="text-sm text-red-700 mt-1">
+              Para una <b>entrada sin PRD</b> tienes que indicar como mínimo
+              <b>nombre</b> y <b>unidad</b> del producto.
             </div>
-          `;
-          return;
-        }
+          </div>
+        `;
+        return;
+      }
+    }
+  }
 
-        // SALIDA (OUT) — mostrar detalle de lotes consumidos si la petición fue OK (render SOLO en #out-section)
-        if (mtype === 'OUT') {
-          // 2.1 — Acción OPENED (marcar como abierto)
-          if (data && data.action === "OPENED") {
-            $OUT().innerHTML = `
-              <div class="p-4 bg-yellow-50 border border-yellow-200 rounded mb-4">
-                <div class="font-semibold text-yellow-800">
-                  ✅ ${data.detail}
-                </div>
-                <div class="mt-2 text-sm text-yellow-900 space-y-1">
-                  <p><b>Lote abierto:</b> #${data.batch_id}</p>
-                  <p><b>Caduca tras abrir:</b> ${
-                    data.open_expires_at ? data.open_expires_at : "—"
-                  }</p>
-                </div>
-              </div>
-            `;
-            return;
-          }
+  const body = {
+      payload: payloadRaw,
+      quantity: document.getElementById('qty').value || 1,
+      location: document.getElementById('loc').value || '',
+      movement_type: mtype,
+      mark_open: document.getElementById("mark_open")?.checked || false,
+      open_days: document.getElementById("open_days")?.value || null,
+  };
 
-          if (data && data.ok) {
-            const rows = (data.consumed_batches || []).map(cb => `
-              <tr class="hover:bg-gray-50">
-                <td class="border px-3 py-2 text-center">${cb.batch_id}</td>
-                <td class="border px-3 py-2 text-center">${cb.prev_qty}</td>
-                <td class="border px-3 py-2 text-center">−${cb.taken}</td>
-                <td class="border px-3 py-2 text-center">${cb.new_qty}</td>
-                <td class="border px-3 py-2 text-center">${cb.expiration_date || '-'}</td>
-              </tr>
-            `).join("");
+  if (mtype === 'IN') {
+    body.new_product = {
+      name: newNameEl?.value || '',
+      category: newCategoryEl?.value || '',
+      unit: newUnitEl?.value || '',
+      min_stock: parseInt(newMinStockEl?.value || '0'),
+      notes: newNotesEl?.value || '',
+      expiration_date: newExpDateEl?.value || null,
+    };
+  }
 
-            // Info extra de caducidades globales
-            const nearest = data.nearest_expiration;
-            const farthest = data.farthest_expiration;
+  try {
+    const res = await fetch('/api/scan/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+      credentials: 'same-origin',
+      body: JSON.stringify(body),
+    });
 
-            let expInfo = "";
-            if (nearest && farthest) {
-              if (nearest === farthest) {
-                expInfo = `
-                  <div class="text-xs text-gray-600">
-                    Caducidad de los lotes restantes: <b>${nearest}</b>
-                  </div>`;
-              } else {
-                expInfo = `
-                  <div class="text-xs text-gray-600">
-                    Lote más próximo: <b>${nearest}</b> · Último lote: <b>${farthest}</b>
-                  </div>`;
-              }
-            }
+    const raw = await res.text();
+    let data;
+    try { data = JSON.parse(raw); } catch { data = { non_json: true, raw }; }
 
-            const html = `
-              <div class="p-4 bg-green-50 border border-green-200 rounded mb-4">
-                <div class="font-semibold text-green-700">
-                  ✅ ${data.detail || 'Salida registrada correctamente'}
-                </div>
-                <div class="text-sm text-green-700 mt-1">
-                  Producto: <b>${data.product?.name || ''}</b> —
-                  Solicitado: <b>${data.requested}</b> —
-                  Stock total restante: <b>${data.stock_remaining}</b>
-                </div>
-                ${expInfo}
-              </div>
+    const headersObj = {};
+    res.headers.forEach((v, k) => headersObj[k] = v);
 
-              <h4 class="font-semibold mb-2">Lotes consumidos (FIFO)</h4>
-              <p class="text-xs text-gray-500 mb-2">
-                Las cantidades de la tabla se refieren a <b>cada lote afectado</b>.
-                El stock total restante del producto es <b>${data.stock_remaining}</b>.
-              </p>
-              <table class="w-full border-collapse text-sm bg-white rounded overflow-hidden">
-                <thead class="bg-gray-200 text-gray-800">
-                  <tr>
-                    <th class="border px-3 py-2">Lote</th>
-                    <th class="border px-3 py-2">Cantidad previa en este lote</th>
-                    <th class="border px-3 py-2">Extraído de este lote</th>
-                    <th class="border px-3 py-2">Cantidad nueva en este lote</th>
-                    <th class="border px-3 py-2">Caducidad</th>
-                  </tr>
-                </thead>
-                <tbody>${rows || `
-                  <tr><td class="border px-3 py-2 text-center" colspan="5">
-                    <i class="text-gray-500">No se registraron lotes</i>
-                  </td></tr>`}
-                </tbody>
-              </table>
-            `;
+    // AUDITORÍA TOTAL — versión simplificada y fiable (render SOLO en #audit-section)
+    if (mtype === 'AUDTOTAL') {
+      const inv = data?.data?.inventory || data?.inventory || data?.data?.data?.inventory;
+      const total = data?.data?.total_locations || data?.total_locations || data?.data?.data?.total_locations;
 
-            $OUT().innerHTML = html;
-            return;
-          } else {
-            const msg = data?.detail || 'No se pudo registrar la salida.';
-            $OUT().innerHTML = `
-              <div class="p-4 bg-red-50 border border-red-200 rounded">
-                <div class="font-semibold text-red-700">❌ ${msg}</div>
-                ${data?.available !== undefined ? `
-                  <div class="text-sm text-red-700 mt-1">
-                    Disponible: <b>${data.available}</b> — Solicitado: <b>${data.requested}</b>
-                  </div>` : ''}
-              </div>`;
-            return;
-          }
-        }
+      if (!inv || !Array.isArray(inv)) {
+        $AUD().innerHTML = `
+          <div class="p-4 bg-red-100 text-red-700 rounded">
+            <strong>Error:</strong> No se pudo leer el inventario desde la respuesta del servidor.
+          </div>
+          <pre class="mt-2 text-xs text-gray-600 overflow-x-auto">${JSON.stringify(data, null, 2)}</pre>
+        `;
+        return;
+      }
 
+      let html = `
+        <h2 class="text-2xl font-bold text-blue-600 mb-3">📦 Auditoría total</h2>
+        <p class="text-sm text-gray-700 mb-6">Total de ubicaciones: <b>${total || inv.length}</b></p>
+      `;
 
-        // AUD — render SOLO en #audit-section
-        if (mtype === "AUD" && data && data.items) {
-          const rows = data.items.map(item => {
-            const lotes = item.batches.map(b => {
-              const openInfo = (b.opened_units && b.opened_units > 0)
-                ? ` ⭐ abierto${b.opened_units > 1 ? "s" : ""}` +
-                  (b.open_expires_at ? ` (hasta ${b.open_expires_at})` : "")
-                : "";
-
-              return `
-                <li>
-                  Lote #${b.id}
-                  — ${b.quantity} u.
-                  ${b.expiration_date ? `(caduca: ${b.expiration_date})` : ""}
-                  ${openInfo}
-                </li>
-              `;
-            }).join("");
-
-            return `
-              <tr>
-                <td class="border px-3 py-2 font-medium">${item.product}</td>
-                <td class="border px-3 py-2 text-center">${item.total_quantity}</td>
-                <td class="border px-3 py-2 text-center">${item.nearest_expiration || "-"}</td>
-                <td class="border px-3 py-2"><ul>${lotes}</ul></td>
-              </tr>`;
-          }).join("");
-
-          const html = `
-            <h3 class="text-lg font-semibold mb-2">Auditoría — ${data.location}</h3>
-            <p class="text-sm text-gray-600 mb-2">Total productos: <b>${data.total_products}</b></p>
-            <table class="border-collapse w-full text-sm">
-              <thead>
-                <tr class="bg-gray-200">
+      inv.forEach(loc => {
+        html += `
+          <div class="border border-gray-300 rounded-lg p-4 mb-5 bg-gray-50">
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">${loc.location}</h3>
+            <p class="text-sm text-gray-600 mb-3">Productos en esta ubicación: <b>${loc.total_products}</b></p>
+            <table class="w-full border-collapse text-sm bg-white rounded-lg overflow-hidden">
+              <thead class="bg-gray-200 text-gray-800">
+                <tr>
                   <th class="border px-3 py-2 text-left">Producto</th>
                   <th class="border px-3 py-2 text-center">Cantidad total</th>
                   <th class="border px-3 py-2 text-center">Caducidad más próxima</th>
                   <th class="border px-3 py-2 text-left">Lotes</th>
                 </tr>
               </thead>
-              <tbody>${rows}</tbody>
-            </table>`;
-          $AUD().innerHTML = html;
-        } else {
-          // Fallback: JSON crudo al contenedor correspondiente
-          const target = (mtype === 'AUD' || mtype === 'AUDTOTAL') ? $AUD() : $OUT();
-          target.innerHTML = `
-            <pre class="bg-gray-100 border border-gray-300 p-3 rounded text-gray-700 text-xs overflow-x-auto">${
-              JSON.stringify({ ok: res.ok, status: res.status, headers: headersObj, data }, null, 2)
-            }</pre>`;
-        }
+              <tbody>
+        `;
+        (loc.items || []).forEach(it => {
+          const lotes = it.batches?.length
+            ? it.batches.map(b => {
+                const openedInfo = (b.opened_units && b.opened_units > 0)
+                  ? ` — ${b.opened_units} abierta${b.opened_units > 1 ? 's' : ''}` +
+                    (b.open_expires_at ? ` (hasta ${b.open_expires_at})` : '')
+                  : '';
+                return `#${b.id} (${b.quantity}u, ${b.expiration_date || '-'})${openedInfo}`;
+              }).join("<br>")
+            : '<span class="text-gray-400 italic">Sin lotes</span>';
 
-      } catch (e) {
-        // Error de red o excepción inesperada durante el envío/procesado
-        const target = (mtype === 'AUD' || mtype === 'AUDTOTAL') ? $AUD() : $OUT();
-        target.innerHTML = `
-          <div class="p-4 bg-red-50 border border-red-200 rounded">
-            <div class="font-semibold text-red-700">Error de red</div>
-            <pre class="mt-2 text-xs text-gray-600 overflow-x-auto">${String(e)}</pre>
-          </div>`;
-      }
-
-    } // fin function enviar
-
-    // ---- Lector QR / Cámara ----
-    let html5Qr; let cameras = []; let currentCamIndex = 0; let lastText = null;
-
-    function disableCameraUI(message) {
-      const statusEl = document.getElementById('cam-status');
-      const btn = document.getElementById('switchBtn');
-      if (statusEl) {
-        statusEl.textContent = message || 'La cámara no está disponible. Usa el formulario manual para registrar movimientos.';
-      }
-      if (btn) {
-        btn.disabled = true;
-      }
-      const reader = document.getElementById('reader');
-      if (reader) {
-        reader.classList.add('bg-gray-100');
-      }
-    }
-
-    function onScanSuccess(decodedText) {
-      if (decodedText === lastText) return;
-      lastText = decodedText;
-      document.getElementById('payload').value = decodedText;
-
-      const parts = decodedText.split('|').map(s => s.trim());
-      parts.forEach(p => {
-        const [key, value] = p.split(':');
-        if (!key || !value) return;
-        const k = key.toUpperCase();
-        if (k === 'LOC') document.getElementById('loc').value = value;
-        if (k === 'Q') document.getElementById('qty').value = value;
-        if (k === 'T') document.getElementById('mtype').value = value.toUpperCase();
+          html += `
+            <tr class="hover:bg-gray-50">
+              <td class="border px-3 py-2 font-medium">${it.product}</td>
+              <td class="border px-3 py-2 text-center">${it.total_quantity}</td>
+              <td class="border px-3 py-2 text-center">${it.nearest_expiration || '-'}</td>
+              <td class="border px-3 py-2">${lotes}</td>
+            </tr>
+          `;
+        });
+        html += `
+              </tbody>
+            </table>
+          </div>
+        `;
       });
+
+      $AUD().innerHTML = html;
+      return;
     }
 
-    function onScanError(_msg) {
-      // Podríamos loguear si queremos, pero no es crítico para el usuario.
-    }
+    // ENTRADA (IN) — QR + tarjeta bonita en OUT y salir
+    if (mtype === 'IN') {
+      // inner = datos reales de la API (por si vienen anidados en data.data)
+      const inner = (data && (data.payload !== undefined || data.detail !== undefined))
+                    ? data
+                    : (data && data.data) || data || {};
 
-    async function startWithFacingMode() {
-      await html5Qr.start(
-        { facingMode: "environment" },
-        { fps: 12, qrbox: 280, rememberLastUsedCamera: true },
-        onScanSuccess,
-        onScanError
-      );
-    }
-
-    async function listAndStartPreferred() {
-      cameras = await Html5Qrcode.getCameras();
-      if (!cameras || !cameras.length) {
-        throw new Error("SIN_CAMARAS");
+      const qrValue = inner.payload || payloadRaw || '';
+      if (qrValue) {
+        const qrCanvas = document.getElementById('qr-canvas');
+        const qrContainer = document.getElementById('qr-result');
+        qrContainer.classList.remove('hidden');
+        new QRious({ element: qrCanvas, value: qrValue, size: 200, level: 'H' });
       }
-      const prefer = cameras.find(c => (c.label || "").toLowerCase().match(/back|rear|environment/));
-      currentCamIndex = Math.max(0, prefer ? cameras.indexOf(prefer) : 0);
-      await html5Qr.start(
-        cameras[currentCamIndex].id,
-        { fps: 12, qrbox: 280 },
-        onScanSuccess,
-        onScanError
-      );
+
+      const detailText = inner.detail || 'Entrada registrada correctamente';
+      const shownPayload = inner.payload || payloadRaw || '(no disponible)';
+      const locText = body.location || '-';
+      const qtyText = body.quantity || 1;
+
+      $OUT().innerHTML = `
+        <div class="p-4 bg-blue-50 border border-blue-200 rounded mb-2">
+          <div class="font-semibold text-blue-800">
+            ✅ ${detailText}
+          </div>
+          <div class="mt-2 text-sm text-blue-900 space-y-1">
+            <p>Ubicación: <b>${locText}</b></p>
+            <p>Cantidad recibida: <b>${qtyText}</b></p>
+            <p>Payload / PRD:
+              <code class="text-xs bg-blue-100 px-1 py-0.5 rounded">${shownPayload}</code>
+            </p>
+          </div>
+        </div>
+      `;
+      return;
     }
 
-    async function startScanner() {
-      const statusEl = document.getElementById('cam-status');
-      try {
-        html5Qr = new Html5Qrcode("reader");
-        try {
-          await startWithFacingMode();
-          statusEl.textContent = "Cámara trasera activa. Enfoca un QR…";
-        } catch (_e) {
-          try {
-            await listAndStartPreferred();
-            const label = cameras[currentCamIndex]?.label || "cámara";
-            statusEl.textContent = `Cámara activa (${label}). Enfoca un QR…`;
-          } catch (innerErr) {
-            if (innerErr && innerErr.message === "SIN_CAMARAS") {
-              disableCameraUI("No se han encontrado cámaras en este dispositivo. Usa el formulario manual.");
-            } else {
-              console.error(innerErr);
-              disableCameraUI("No se pudo iniciar la cámara. Puedes usar el formulario manual sin problema.");
-            }
+    // SALIDA (OUT) — mostrar detalle de lotes consumidos si la petición fue OK (render SOLO en #out-section)
+    if (mtype === 'OUT') {
+      // 2.1 — Acción OPENED (marcar como abierto)
+      if (data && data.action === "OPENED") {
+        $OUT().innerHTML = `
+          <div class="p-4 bg-yellow-50 border border-yellow-200 rounded mb-4">
+            <div class="font-semibold text-yellow-800">
+              ✅ ${data.detail}
+            </div>
+            <div class="mt-2 text-sm text-yellow-900 space-y-1">
+              <p><b>Lote abierto:</b> #${data.batch_id}</p>
+              <p><b>Caduca tras abrir:</b> ${
+                data.open_expires_at ? data.open_expires_at : "—"
+              }</p>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      if (data && data.ok) {
+        const rows = (data.consumed_batches || []).map(cb => `
+          <tr class="hover:bg-gray-50">
+            <td class="border px-3 py-2 text-center">${cb.batch_id}</td>
+            <td class="border px-3 py-2 text-center">${cb.prev_qty}</td>
+            <td class="border px-3 py-2 text-center">−${cb.taken}</td>
+            <td class="border px-3 py-2 text-center">${cb.new_qty}</td>
+            <td class="border px-3 py-2 text-center">${cb.expiration_date || '-'}</td>
+          </tr>
+        `).join("");
+
+        // Info extra de caducidades globales
+        const nearest = data.nearest_expiration;
+        const farthest = data.farthest_expiration;
+
+        let expInfo = "";
+        if (nearest && farthest) {
+          if (nearest === farthest) {
+            expInfo = `
+              <div class="text-xs text-gray-600">
+                Caducidad de los lotes restantes: <b>${nearest}</b>
+              </div>`;
+          } else {
+            expInfo = `
+              <div class="text-xs text-gray-600">
+                Lote más próximo: <b>${nearest}</b> · Último lote: <b>${farthest}</b>
+              </div>`;
           }
         }
-      } catch (e) {
-        console.error(e);
-        // Casos típicos: permisos denegados, navegador bloquea cámara, etc.
-        disableCameraUI("No fue posible acceder a la cámara (permisos denegados o dispositivo no soportado). Usa el formulario manual.");
+
+        const html = `
+          <div class="p-4 bg-green-50 border border-green-200 rounded mb-4">
+            <div class="font-semibold text-green-700">
+              ✅ ${data.detail || 'Salida registrada correctamente'}
+            </div>
+            <div class="text-sm text-green-700 mt-1">
+              Producto: <b>${data.product?.name || ''}</b> —
+              Solicitado: <b>${data.requested}</b> —
+              Stock total restante: <b>${data.stock_remaining}</b>
+            </div>
+            ${expInfo}
+          </div>
+
+          <h4 class="font-semibold mb-2">Lotes consumidos (FIFO)</h4>
+          <p class="text-xs text-gray-500 mb-2">
+            Las cantidades de la tabla se refieren a <b>cada lote afectado</b>.
+            El stock total restante del producto es <b>${data.stock_remaining}</b>.
+          </p>
+          <table class="w-full border-collapse text-sm bg-white rounded overflow-hidden">
+            <thead class="bg-gray-200 text-gray-800">
+              <tr>
+                <th class="border px-3 py-2">Lote</th>
+                <th class="border px-3 py-2">Cantidad previa en este lote</th>
+                <th class="border px-3 py-2">Extraído de este lote</th>
+                <th class="border px-3 py-2">Cantidad nueva en este lote</th>
+                <th class="border px-3 py-2">Caducidad</th>
+              </tr>
+            </thead>
+            <tbody>${rows || `
+              <tr><td class="border px-3 py-2 text-center" colspan="5">
+                <i class="text-gray-500">No se registraron lotes</i>
+              </td></tr>`}
+            </tbody>
+          </table>
+        `;
+
+        $OUT().innerHTML = html;
+        return;
+      } else {
+        const msg = data?.detail || 'No se pudo registrar la salida.';
+        $OUT().innerHTML = `
+          <div class="p-4 bg-red-50 border border-red-200 rounded">
+            <div class="font-semibold text-red-700">❌ ${msg}</div>
+            ${data?.available !== undefined ? `
+              <div class="text-sm text-red-700 mt-1">
+                Disponible: <b>${data.available}</b> — Solicitado: <b>${data.requested}</b>
+              </div>` : ''}
+          </div>`;
+        return;
       }
     }
 
-    async function switchCamera() {
-      const statusEl = document.getElementById('cam-status');
+    // AUD — render SOLO en #audit-section
+    if (mtype === "AUD" && data && data.items) {
+      const rows = data.items.map(item => {
+        const lotes = item.batches.map(b => {
+          const openInfo = (b.opened_units && b.opened_units > 0)
+            ? ` ⭐ abierto${b.opened_units > 1 ? "s" : ""}` +
+              (b.open_expires_at ? ` (hasta ${b.open_expires_at})` : "")
+            : "";
+
+          return `
+            <li>
+              Lote #${b.id}
+              — ${b.quantity} u.
+              ${b.expiration_date ? `(caduca: ${b.expiration_date})` : ""}
+              ${openInfo}
+            </li>
+          `;
+        }).join("");
+
+        return `
+          <tr>
+            <td class="border px-3 py-2 font-medium">${item.product}</td>
+            <td class="border px-3 py-2 text-center">${item.total_quantity}</td>
+            <td class="border px-3 py-2 text-center">${item.nearest_expiration || "-"}</td>
+            <td class="border px-3 py-2"><ul>${lotes}</ul></td>
+          </tr>`;
+      }).join("");
+
+      const html = `
+        <h3 class="text-lg font-semibold mb-2">Auditoría — ${data.location}</h3>
+        <p class="text-sm text-gray-600 mb-2">Total productos: <b>${data.total_products}</b></p>
+        <table class="border-collapse w-full text-sm">
+          <thead>
+            <tr class="bg-gray-200">
+              <th class="border px-3 py-2 text-left">Producto</th>
+              <th class="border px-3 py-2 text-center">Cantidad total</th>
+              <th class="border px-3 py-2 text-center">Caducidad más próxima</th>
+              <th class="border px-3 py-2 text-left">Lotes</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+      $AUD().innerHTML = html;
+    } else {
+      // Fallback: JSON crudo al contenedor correspondiente
+      const target = (mtype === 'AUD' || mtype === 'AUDTOTAL') ? $AUD() : $OUT();
+      target.innerHTML = `
+        <pre class="bg-gray-100 border border-gray-300 p-3 rounded text-gray-700 text-xs overflow-x-auto">${
+          JSON.stringify({ ok: res.ok, status: res.status, headers: headersObj, data }, null, 2)
+        }</pre>`;
+    }
+
+  } catch (e) {
+    // Error de red o excepción inesperada durante el envío/procesado
+    const target = (mtype === 'AUD' || mtype === 'AUDTOTAL') ? $AUD() : $OUT();
+    target.innerHTML = `
+      <div class="p-4 bg-red-50 border border-red-200 rounded">
+        <div class="font-semibold text-red-700">Error de red</div>
+        <pre class="mt-2 text-xs text-gray-600 overflow-x-auto">${String(e)}</pre>
+      </div>`;
+  }
+
+} // fin function enviar
+
+// ---- Lector QR / Cámara ----
+let html5Qr; let cameras = []; let currentCamIndex = 0; let lastText = null;
+
+function disableCameraUI(message) {
+  const statusEl = document.getElementById('cam-status');
+  const btn = document.getElementById('switchBtn');
+  if (statusEl) {
+    statusEl.textContent = message || 'La cámara no está disponible. Usa el formulario manual para registrar movimientos.';
+  }
+  if (btn) {
+    btn.disabled = true;
+  }
+  const reader = document.getElementById('reader');
+  if (reader) {
+    reader.classList.add('bg-gray-100');
+  }
+}
+
+function onScanSuccess(decodedText) {
+  if (decodedText === lastText) return;
+  lastText = decodedText;
+  document.getElementById('payload').value = decodedText;
+
+  const parts = decodedText.split('|').map(s => s.trim());
+  parts.forEach(p => {
+    const [key, value] = p.split(':');
+    if (!key || !value) return;
+    const k = key.toUpperCase();
+    if (k === 'LOC') document.getElementById('loc').value = value;
+    if (k === 'Q') document.getElementById('qty').value = value;
+    if (k === 'T') document.getElementById('mtype').value = value.toUpperCase();
+  });
+}
+
+function onScanError(_msg) {
+  // Podríamos loguear si queremos, pero no es crítico para el usuario.
+}
+
+async function startWithFacingMode() {
+  await html5Qr.start(
+    { facingMode: "environment" },
+    { fps: 12, qrbox: 280, rememberLastUsedCamera: true },
+    onScanSuccess,
+    onScanError
+  );
+}
+
+async function listAndStartPreferred() {
+  cameras = await Html5Qrcode.getCameras();
+  if (!cameras || !cameras.length) {
+    throw new Error("SIN_CAMARAS");
+  }
+  const prefer = cameras.find(c => (c.label || "").toLowerCase().match(/back|rear|environment/));
+  currentCamIndex = Math.max(0, prefer ? cameras.indexOf(prefer) : 0);
+  await html5Qr.start(
+    cameras[currentCamIndex].id,
+    { fps: 12, qrbox: 280 },
+    onScanSuccess,
+    onScanError
+  );
+}
+
+async function startScanner() {
+  const statusEl = document.getElementById('cam-status');
+  try {
+    html5Qr = new Html5Qrcode("reader");
+    try {
+      await startWithFacingMode();
+      statusEl.textContent = "Cámara trasera activa. Enfoca un QR…";
+    } catch (_e) {
       try {
-        if (!html5Qr || !cameras.length) {
-          statusEl.textContent = "No hay más cámaras disponibles.";
-          return;
-        }
-        await html5Qr.stop(); 
-        await html5Qr.clear();
-        currentCamIndex = (currentCamIndex + 1) % cameras.length;
-        await html5Qr.start(
-          cameras[currentCamIndex].id,
-          { fps: 12, qrbox: 280 },
-          onScanSuccess,
-          onScanError
-        );
+        await listAndStartPreferred();
         const label = cameras[currentCamIndex]?.label || "cámara";
         statusEl.textContent = `Cámara activa (${label}). Enfoca un QR…`;
-      } catch (e) {
-        console.error(e);
-        statusEl.textContent = "No se pudo cambiar de cámara. Puedes seguir usando el formulario manual.";
+      } catch (innerErr) {
+        if (innerErr && innerErr.message === "SIN_CAMARAS") {
+          disableCameraUI("No se han encontrado cámaras en este dispositivo. Usa el formulario manual.");
+        } else {
+          console.error(innerErr);
+          disableCameraUI("No se pudo iniciar la cámara. Puedes usar el formulario manual sin problema.");
+        }
       }
     }
+  } catch (e) {
+    console.error(e);
+    // Casos típicos: permisos denegados, navegador bloquea cámara, etc.
+    disableCameraUI("No fue posible acceder a la cámara (permisos denegados o dispositivo no soportado). Usa el formulario manual.");
+  }
+}
 
-    // ---- Inicialización ----
-    document.addEventListener('DOMContentLoaded', () => {
-      console.log("DOM cargado, inicializando escáner...");
+async function switchCamera() {
+  const statusEl = document.getElementById('cam-status');
+  try {
+    if (!html5Qr || !cameras.length) {
+      statusEl.textContent = "No hay más cámaras disponibles.";
+      return;
+    }
+    await html5Qr.stop(); 
+    await html5Qr.clear();
+    currentCamIndex = (currentCamIndex + 1) % cameras.length;
+    await html5Qr.start(
+      cameras[currentCamIndex].id,
+      { fps: 12, qrbox: 280 },
+      onScanSuccess,
+      onScanError
+    );
+    const label = cameras[currentCamIndex]?.label || "cámara";
+    statusEl.textContent = `Cámara activa (${label}). Enfoca un QR…`;
+  } catch (e) {
+    console.error(e);
+    statusEl.textContent = "No se pudo cambiar de cámara. Puedes seguir usando el formulario manual.";
+  }
+}
 
-      // Mostrar/ocultar campos de Entrada
-      const tipoSelect = document.getElementById('mtype');
-      const extraForm = document.getElementById('entrada-extra');
-      const openOptions = document.getElementById('open-options');
+// ---- Inicialización ----
+document.addEventListener('DOMContentLoaded', () => {
+  console.log("DOM cargado, inicializando escáner...");
 
-      function updateVisibility() {
-          const t = tipoSelect.value;
+  // Mostrar/ocultar campos de Entrada / opciones de abierto
+  const tipoSelect = document.getElementById('mtype');
+  const extraForm = document.getElementById('entrada-extra');
+  const openOptions = document.getElementById('open-options');
 
-          // Mostrar solo si tipo = IN
-          if (t === 'IN') extraForm.classList.remove('hidden');
-          else extraForm.classList.add('hidden');
+  function updateVisibility() {
+      const t = tipoSelect.value;
 
-          // Mostrar solo si tipo = OUT
-          if (t === 'OUT') openOptions.classList.remove('hidden');
-          else openOptions.classList.add('hidden');
-      }
+      // Mostrar solo si tipo = IN
+      if (t === 'IN') extraForm.classList.remove('hidden');
+      else extraForm.classList.add('hidden');
 
-      tipoSelect.addEventListener('change', updateVisibility);
-      updateVisibility();
-      const updateExtra = () => {
-        if (tipoSelect.value === 'IN') extraForm.classList.remove('hidden');
-        else extraForm.classList.add('hidden');
-      };
-      tipoSelect.addEventListener('change', updateExtra);
-      updateExtra();
+      // Mostrar solo si tipo = OUT
+      if (t === 'OUT') openOptions.classList.remove('hidden');
+      else openOptions.classList.add('hidden');
+  }
 
-      // Inicializar cámara con comprobación de soporte y librería
-      setTimeout(() => {
-        const statusEl = document.getElementById('cam-status');
+  tipoSelect.addEventListener('change', updateVisibility);
+  updateVisibility();
 
-        if (typeof Html5Qrcode === 'undefined') {
-          console.error('Html5Qrcode no está disponible. Verifica la carga de la librería.');
-          disableCameraUI('La librería de cámara no se ha podido cargar. Usa el formulario manual.');
-          return;
-        }
+  // Inicializar cámara con comprobación de soporte y librería
+  setTimeout(() => {
+    const statusEl = document.getElementById('cam-status');
 
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          console.warn('Este navegador/dispositivo no soporta getUserMedia.');
-          disableCameraUI('Este navegador no permite usar cámara. Usa el formulario manual para registrar los movimientos.');
-          return;
-        }
-
-        const switchBtn = document.getElementById('switchBtn');
-        if (switchBtn) {
-          switchBtn.addEventListener('click', switchCamera);
-        }
-        startScanner();
-      }, 100);
-    });
-
-    document.addEventListener("DOMContentLoaded", () => {
-        const chk = document.getElementById("mark_open");
-        const div = document.getElementById("open-days-wrapper");
-
-        if (chk) {
-            chk.addEventListener("change", () => {
-                if (chk.checked) div.classList.remove("hidden");
-                else div.classList.add("hidden");
-            });
-        }
-    });
-
-    const markOpenEl = document.getElementById("mark_open");
-    const openDaysBlock = document.getElementById("open_days_block");
-
-    if (markOpenEl) {
-        markOpenEl.addEventListener("change", () => {
-            if (markOpenEl.checked) openDaysBlock.classList.remove("hidden");
-            else openDaysBlock.classList.add("hidden");
-        });
+    if (typeof Html5Qrcode === 'undefined') {
+      console.error('Html5Qrcode no está disponible. Verifica la carga de la librería.');
+      disableCameraUI('La librería de cámara no se ha podido cargar. Usa el formulario manual.');
+      return;
     }
 
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      console.warn('Este navegador/dispositivo no soporta getUserMedia.');
+      disableCameraUI('Este navegador no permite usar cámara. Usa el formulario manual para registrar los movimientos.');
+      return;
+    }
 
-  </script>
-</body>
-</html>
+    const switchBtn = document.getElementById('switchBtn');
+    if (switchBtn) {
+      switchBtn.addEventListener('click', switchCamera);
+    }
+    startScanner();
+  }, 100);
+});
+
+
+</script>
+{% endblock %}

@@ -1,0 +1,114 @@
+{% extends "inventory/base.html" %}
+{% block title %}Inicio · Smart Inventory{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 space-y-6">
+
+  <header class="space-y-2">
+    <h1 class="text-3xl font-bold text-teal-800">Panel principal</h1>
+    <p class="text-sm text-slate-600">
+      Elige qué quieres hacer: registrar movimientos, gestionar ubicaciones
+      o, más adelante, ver analíticas y ajustes.
+    </p>
+  </header>
+
+  <section class="grid gap-4 md:grid-cols-2">
+    <!-- Tarjeta: Inventario (Scan) -->
+    <article class="bg-sky-50 border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="font-semibold text-slate-900">Inventario / Scan</h2>
+        <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+          Disponible
+        </span>
+      </div>
+      <p class="text-sm text-slate-600 flex-1">
+        Registrar entradas, salidas, ajustes y auditorías.  
+        Puedes usar la cámara o el formulario manual.
+      </p>
+      <div class="mt-4">
+        <a
+            href="{% url 'scan' %}"
+            class="inline-flex items-center justify-center px-4 py-2 rounded-md
+                    bg-teal-600 text-white text-sm font-medium shadow-sm
+                    hover:bg-teal-700 hover:shadow-md
+                    focus-visible:outline-none focus-visible:ring-2
+                    focus-visible:ring-teal-500 focus-visible:ring-offset-2
+                    focus-visible:ring-offset-sky-50
+                    motion-safe:transition motion-safe:duration-150 motion-safe:hover:-translate-y-0.5"
+        >
+            Ir a Scan
+            </a>
+
+      </div>
+    </article>
+
+    <!-- Tarjeta: Ubicaciones -->
+    <article class="bg-sky-50 border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="font-semibold text-slate-900">Ubicaciones</h2>
+        <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+          Disponible
+        </span>
+      </div>
+      <p class="text-sm text-slate-600 flex-1">
+        Gestiona el árbol de ubicaciones (armarios, cajas, estantes...).
+        Crea raíces, sub-ubicaciones y reordena la estructura.
+      </p>
+      <div class="mt-4">
+        <a href="{% url 'locations-manager' %}"
+           class="inline-flex items-center justify-center px-4 py-2 rounded-md
+                bg-teal-600 text-white text-sm font-medium shadow-sm
+                hover:bg-teal-700 hover:shadow-md
+                focus-visible:outline-none focus-visible:ring-2
+                focus-visible:ring-teal-500 focus-visible:ring-offset-2
+                focus-visible:ring-offset-sky-50
+                motion-safe:transition motion-safe:duration-150 motion-safe:hover:-translate-y-0.5"
+        >
+        Ir a Ubicaciones
+        </a>
+      </div>
+    </article>
+
+    <!-- Tarjeta: Analytics (futuro) -->
+    <article class="bg-white border border-dashed border-teal-200 rounded-xl p-4 flex flex-col opacity-70">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="font-semibold text-slate-900">Analytics / ML</h2>
+        <span class="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+          Próximamente
+        </span>
+      </div>
+      <p class="text-sm text-slate-600 flex-1">
+        Panel de consumo, predicciones y alertas inteligentes de caducidad
+        y stock mínimo basado en tus datos históricos.
+      </p>
+      <div class="mt-4">
+        <button class="inline-flex items-center px-3 py-1.5 text-sm rounded-lg
+                       bg-slate-200 text-slate-500 cursor-not-allowed">
+          No disponible aún
+        </button>
+      </div>
+    </article>
+
+    <!-- Tarjeta: Ajustes (futuro) -->
+    <article class="bg-white border border-dashed border-teal-200 rounded-xl p-4 flex flex-col opacity-70">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="font-semibold text-slate-900">Ajustes</h2>
+        <span class="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+          Próximamente
+        </span>
+      </div>
+      <p class="text-sm text-slate-600 flex-1">
+        Configuración general del sistema: umbrales por defecto,
+        preferencias de notificación, usuarios, etc.
+      </p>
+      <div class="mt-4">
+        <button class="inline-flex items-center px-3 py-1.5 text-sm rounded-lg
+                       bg-slate-200 text-slate-500 cursor-not-allowed">
+          No disponible aún
+        </button>
+      </div>
+    </article>
+  </section>
+
+</div>
+{% endblock %}

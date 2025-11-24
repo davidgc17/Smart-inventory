@@ -35,19 +35,19 @@ Diseñada para uso real y pensada como herramienta de portfolio técnico.
 
 ## 🧩 Arquitectura
 
-Backend: Django + DRF  
-Frontend: TailwindCSS + Alpine.js  
-Base de datos: SQLite / PostgreSQL  
+- Backend: Django + DRF  
+- Frontend: TailwindCSS + Alpine.js  
+- Base de datos: SQLite / PostgreSQL  
 
 ---
 
 ## 🔧 Instalación
 
-```
+```bash
 git clone https://github.com/tu-usuario/smart-inventory.git
 cd smart-inventory
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py runserver
@@ -58,19 +58,27 @@ python manage.py runserver
 ## 📚 Documentación técnica
 
 Disponible en `docs/`:
-- smart_inventory.tex
-- smart_inventory.pdf
+- `smart_inventory.tex`
+- `smart_inventory.pdf`
 
 ---
 
 ## 🗺️ Roadmap
 
-✔️ Fase 1–3 completas  
-🔐 Fase 4 – Login  
-🛡️ Fase 5 – Seguridad  
-📦 Fase 6 – Distribución  
-📊 Fase 7 – Analytics  
-🤖 Fase 8 – ML  
+- ✔️ Fase 1–3 completas  
+- 🔐 Fase 4 – Login  
+- 🛡️ Fase 5 – Seguridad  
+- 📦 Fase 6 – Distribución  
+- 📊 Fase 7 – Analytics  
+- 🤖 Fase 8 – ML  
+
+---
+
+## 📄 Licencia
+
+Este proyecto está licenciado bajo la **MIT License**.  
+Puedes consultar los términos completos en el archivo `LICENSE`.  
+Información adicional en `NOTICE`.
 
 ---
 

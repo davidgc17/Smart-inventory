@@ -10,20 +10,19 @@
     {# ❌ De momento NO dependemos de este CSS compilado #}
     {# <link rel="stylesheet" href="{% static 'css/output.css' %}"> #}
 
-    {# ✅ Cargamos Tailwind desde CDN #}
+    {# ✅ Tailwind desde CDN #}
     <script src="https://cdn.tailwindcss.com"></script>
 
     <script>
-      // Configuración rápida del tema azul verdoso tranquilo
       tailwind.config = {
         theme: {
           extend: {
             colors: {
               brand: {
-                bg: '#0f172a',      // fondo header (slate muy oscuro)
-                soft: '#0f766e',    // teal suave para botones
+                bg: '#0f172a',
+                soft: '#0f766e',
                 softHover: '#115e59',
-                accent: '#22c55e',  // detalles/éxito
+                accent: '#22c55e',
               },
             },
           },
@@ -31,95 +30,100 @@
       }
     </script>
 
+    <!-- 🔹 AQUÍ Alpine.js -->
+    <script src="https://unpkg.com/alpinejs" defer></script>
+
     {% block extra_head %}{% endblock %}
 </head>
 
 <body class="min-h-screen bg-cyan-50 text-slate-900 antialiased flex flex-col">
 
         <!-- Header + Navbar -->
-    <header class="bg-white border-b border-slate-200">
-        <div x-data="{ open: false }" class="max-w-5xl mx-auto px-4">
+    <header x-data="{ open: false }" class="bg-white border-b border-slate-200">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
 
-            <!-- Fila principal (branding + nav escritorio + botón móvil) -->
-            <div class="py-3 flex items-center justify-between gap-4">
+            <!-- Branding -->
+            <div class="flex items-center gap-3">
+                <!-- Logo (asegúrate de que está en static/img/logopeq.png) -->
+                <img src="{% static 'img/logopeq.png' %}"
+                    alt="Smart Inventory"
+                    class="h-8 w-8 rounded-full shadow-sm">
 
-                <!-- Branding -->
-                <div class="flex items-center gap-3">
-                    <img src="{% static 'img/logopeq.png' %}"
-                        alt="Logo Smart Inventory"
-                        class="h-8 w-8 rounded-md shadow-sm object-contain" />
-
-                    <p class="text-sm font-semibold tracking-tight">
+                <div class="flex flex-col leading-tight">
+                    <p class="text-sm font-semibold tracking-tight text-slate-900">
                         Smart Inventory
                     </p>
+                    <p class="text-[11px] text-teal-700">
+                        Control de stock en casa y oficina
+                    </p>
                 </div>
+            </div>
 
-                <!-- Navbar escritorio -->
-                <nav class="hidden md:flex items-center gap-4 text-sm font-medium">
-                    <a href="{% url 'home' %}"
-                    class="px-2 py-1 rounded-lg hover:bg-slate-100 text-slate-700">
-                        Inicio
-                    </a>
-                    <a href="{% url 'scan' %}"
-                    class="px-2 py-1 rounded-lg hover:bg-slate-100 text-slate-700">
-                        Inventario
-                    </a>
-                    <a href="{% url 'locations-manager' %}"
-                    class="px-2 py-1 rounded-lg hover:bg-slate-100 text-slate-700">
-                        Ubicaciones
-                    </a>
-                </nav>
-
-                <!-- Botón menú móvil -->
-                <button
-                    type="button"
-                    class="md:hidden inline-flex items-center justify-center rounded-md p-2
-                        text-slate-700 hover:bg-slate-100 focus:outline-none
-                        focus:ring-2 focus:ring-teal-500"
-                    @click="open = !open"
-                    :aria-expanded="open.toString()"
-                >
-                    <span class="sr-only">Abrir menú</span>
-                    <svg xmlns="http://www.w3.org/2000/svg"
-                        class="h-5 w-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            stroke-width="1.5"
-                            d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
-                </button>
-
-            </div> <!-- cierre fila -->
-
-            <!-- Menú móvil -->
-            <nav
-                class="md:hidden border-t border-slate-200 bg-white"
-                x-show="open"
-                x-transition
-            >
-                <div class="py-2 flex flex-col gap-1 text-sm font-medium">
-                    <a href="{% url 'home' %}"
-                    class="block px-2 py-2 rounded-lg hover:bg-slate-100 text-slate-700"
-                    @click="open = false">
-                        Inicio
-                    </a>
-                    <a href="{% url 'scan' %}"
-                    class="block px-2 py-2 rounded-lg hover:bg-slate-100 text-slate-700"
-                    @click="open = false">
-                        Inventario
-                    </a>
-                    <a href="{% url 'locations-manager' %}"
-                    class="block px-2 py-2 rounded-lg hover:bg-slate-100 text-slate-700"
-                    @click="open = false">
-                        Ubicaciones
-                    </a>
-                </div>
+            <!-- Navbar escritorio -->
+            <nav class="hidden md:flex items-center gap-4 text-sm font-medium">
+                <a href="{% url 'home' %}"
+                class="px-2 py-1 rounded-lg hover:bg-teal-50 text-slate-700">
+                    Inicio
+                </a>
+                <a href="{% url 'scan' %}"
+                class="px-2 py-1 rounded-lg hover:bg-teal-50 text-slate-700">
+                    Inventario
+                </a>
+                <a href="{% url 'locations-manager' %}"
+                class="px-2 py-1 rounded-lg hover:bg-teal-50 text-slate-700">
+                    Ubicaciones
+                </a>
             </nav>
 
-        </div> <!-- cierre x-data -->
+            <!-- Botón menú móvil -->
+            <button
+                type="button"
+                class="md:hidden inline-flex items-center justify-center rounded-md p-2 text-slate-700 hover:bg-teal-50 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                @click="open = !open"
+                aria-label="Abrir menú de navegación"
+            >
+                <!-- Icono hamburguesa -->
+                <svg x-show="!open" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                        d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+                <!-- Icono de cerrar -->
+                <svg x-show="open" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                        d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Menú móvil -->
+        <nav
+            x-show="open"
+            x-transition
+            @click.outside="open = false"
+            class="md:hidden border-t border-slate-200 bg-white"
+        >
+            <div class="max-w-5xl mx-auto px-4 py-2 flex flex-col gap-1 text-sm font-medium">
+                <a href="{% url 'home' %}"
+                class="px-2 py-2 rounded-lg hover:bg-teal-50 text-slate-700"
+                @click="open = false">
+                    Inicio
+                </a>
+                <a href="{% url 'scan' %}"
+                class="px-2 py-2 rounded-lg hover:bg-teal-50 text-slate-700"
+                @click="open = false">
+                    Inventario
+                </a>
+                <a href="{% url 'locations-manager' %}"
+                class="px-2 py-2 rounded-lg hover:bg-teal-50 text-slate-700"
+                @click="open = false">
+                    Ubicaciones
+                </a>
+            </div>
+        </nav>
     </header>
+
 
 
 

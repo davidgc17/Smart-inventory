@@ -1,5 +1,16 @@
 /*! tailwindcss v4.1.17 | MIT License | https://tailwindcss.com */
 @layer properties;
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border-width: 0;
+}
 .static {
   position: static;
 }
@@ -79,6 +90,10 @@
   border-style: var(--tw-border-style);
   border-width: 1px;
 }
+.border-t {
+  border-top-style: var(--tw-border-style);
+  border-top-width: 1px;
+}
 .border-b {
   border-bottom-style: var(--tw-border-style);
   border-bottom-width: 1px;
@@ -92,6 +107,9 @@
 }
 .bg-\[\#d6ecec\] {
   background-color: #d6ecec;
+}
+.object-contain {
+  object-fit: contain;
 }
 .text-center {
   text-align: center;

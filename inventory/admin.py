@@ -1,9 +1,9 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.db.models import Sum, Min
+from .models import Product, Location, Movement, Batch, Organization
 
-from .models import Product, Location, Movement, Batch
-
+admin.site.register(Organization)
 
 # -------------------------------------------------------------------
 #  INLINE: LOTES (BATCHES) DENTRO DE CADA PRODUCTO

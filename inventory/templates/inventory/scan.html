@@ -147,6 +147,40 @@
 
 
 <script>
+
+// =============================
+// ENDPOINTS API OFICIALES
+// =============================
+const API_SCAN = "/api/scan/";
+const API_PRODUCT_SEARCH = "/api/products/search/";
+
+
+// =============================
+// CONTRATO /api/scan/ (documentado)
+// =============================
+// El backend espera estructuras de este tipo:
+//
+// {
+//   movement_type: "IN" | "OUT" | "AUD" | "AUDTOTAL",
+//   payload: "PRD:<uuid>" | "",
+//   location: "<uuid_location_public_id>" | "",
+//   quantity: number,
+//   mark_open: boolean,
+//   open_days: number | null,
+//   new_product?: {
+//     name: string,
+//     category: string,
+//     unit: string,
+//     min_stock: number,
+//     notes: string,
+//     expiration_date: "YYYY-MM-DD" | null
+//   }
+// }
+//
+// Esto sirve como referencia para mantener el contrato claro
+// y evitar errores al modificar el frontend o backend.
+
+
 // ---- Utilidades CSRF + helpers ----
 function getCookie(name) {
   const v = `; ${document.cookie}`;
@@ -194,7 +228,7 @@ function clearAUD() { $AUD().innerHTML = ''; }
       const loc = (locationSelect && locationSelect.value) ? locationSelect.value.trim() : '';
       if (loc) params.set('location', loc);
 
-      const res = await fetch(`/api/products/search/?${params.toString()}`, { signal: lastController.signal });
+      const res = await fetch(`${API_PRODUCT_SEARCH}?${params.toString()}`, { signal: lastController.signal });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return await res.json();
     } catch (_e) {
@@ -232,6 +266,7 @@ function clearAUD() { $AUD().innerHTML = ''; }
 // =============================
 
 // ---- Envío de formulario ----
+
 async function enviar() {
   const mtype = document.getElementById('mtype').value;
 
@@ -337,7 +372,7 @@ async function enviar() {
   }
 
   try {
-    const res = await fetch('/api/scan/', {
+    const res = await fetch(API_SCAN, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
       credentials: 'same-origin',

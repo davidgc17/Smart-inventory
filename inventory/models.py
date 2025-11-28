@@ -8,7 +8,11 @@ from django.db.models import Q
 from django.utils.text import slugify
 from django.utils import timezone
 from datetime import datetime, timedelta
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.contrib.auth import get_user_model
 
+User = get_user_model()
 
 # =========================
 #  Multi-tenant helpers
@@ -32,6 +36,61 @@ DEFAULT_TENANT = getattr(
     "DEFAULT_TENANT",
     uuid.UUID("00000000-0000-0000-0000-000000000001"),
 )
+
+
+# =========================
+#  Organization (tenant)
+# =========================
+
+class Organization(models.Model):
+    """
+    Capa de organización/tenant.
+    El id de esta tabla será el que usemos en tenant_id de Product, Location, etc.
+    """
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+    )
+    name = models.CharField(max_length=150)
+
+    owner = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="organization",
+        help_text="Usuario propietario de esta organización",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Organization"
+        verbose_name_plural = "Organizations"
+
+    def __str__(self):
+        return self.name
+
+# =========================
+#  Signals: auto-crear Organization
+# =========================
+
+@receiver(post_save, sender=User)
+def create_user_organization(sender, instance, created, **kwargs):
+    """
+    Cada vez que se crea un usuario nuevo, le damos una Organization propia.
+    Más adelante usaremos Organization.id como tenant_id de todo su inventario.
+    """
+    if not created:
+        return
+
+    # Evitar duplicados por si algún día creas usuarios a mano
+    if hasattr(instance, "organization"):
+        return
+
+    Organization.objects.create(
+        owner=instance,
+        name=f"Inventario de {instance.username}",
+    )
 
 
 # =========================
@@ -579,3 +638,25 @@ class Batch(models.Model):
             return cls.ACTION_NO_STOCK, None
 
         return cls.ACTION_ASK_OPEN_OR_CONSUME, target_batch
+
+
+# =========================
+#  Signals: auto-crear Organization por usuario
+# =========================
+
+@receiver(post_save, sender=User)
+def create_user_organization(sender, instance, created, **kwargs):
+    """
+    Cada vez que se crea un usuario nuevo, le damos una Organization propia.
+    """
+    if not created:
+        return
+
+    # Si por algún motivo ya tiene, no duplicar
+    if hasattr(instance, "organization"):
+        return
+
+    Organization.objects.create(
+        owner=instance,
+        name=f"Inventario de {instance.username}",
+    )

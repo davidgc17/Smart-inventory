@@ -16,6 +16,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.routers import DefaultRouter
 from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.permissions import IsAuthenticated
 
 from .utils import available_stock
 from .models import Batch, Product, Location, Movement
@@ -34,16 +35,35 @@ DEFAULT_TENANT = uuid.UUID(
 )
 
 
+def get_tenant_from_request(request):
+    """
+    Devuelve el tenant a usar en función del usuario.
+    - Si el usuario está autenticado y tiene Organization → su UUID.
+    - Si no, usa DEFAULT_TENANT como fallback.
+    """
+    if request is None:
+        return DEFAULT_TENANT
+
+    user = getattr(request, "user", None)
+    if user and user.is_authenticated and hasattr(user, "organization"):
+        return user.organization.id
+    return DEFAULT_TENANT
+
+
 # -------------------------------------------------------------------
 #  Aislamiento por tenant en ViewSets
 # -------------------------------------------------------------------
 class TenantScopedMixin:
     def get_queryset(self):
         qs = super().get_queryset()
-        return qs.filter(tenant_id=DEFAULT_TENANT)
+        request = getattr(self, "request", None)
+        tenant_id = get_tenant_from_request(request)
+        return qs.filter(tenant_id=tenant_id)
 
     def perform_create(self, serializer):
-        serializer.save(tenant_id=DEFAULT_TENANT)
+        request = getattr(self, "request", None)
+        tenant_id = get_tenant_from_request(request)
+        serializer.save(tenant_id=tenant_id)
 
 
 # -------------------------------------------------------------------
@@ -80,16 +100,18 @@ router.register(r"movements", MovementViewSet)
 #  BUSCADOR RÁPIDO
 # -------------------------------------------------------------------
 class ProductQuickSearch(APIView):
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         q = (request.GET.get("q") or "").strip()
         if not q:
             return Response({"results": []})
 
+        tenant_id = get_tenant_from_request(request)
+
         qs = (
             Product.objects.filter(
-                tenant_id=DEFAULT_TENANT,
+                tenant_id=tenant_id,
                 name__icontains=q,
             )
             .select_related("location")
@@ -117,7 +139,7 @@ class ProductQuickSearch(APIView):
 # -------------------------------------------------------------------
 @method_decorator(csrf_exempt, name="dispatch")
 class ScanEndpoint(APIView):
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [IsAuthenticated]
 
     # Mapeo centralizado de tipos de movimiento
     TYPE_MAP = {
@@ -198,7 +220,7 @@ class ScanEndpoint(APIView):
     # -------------------------
     # Handlers por tipo
     # -------------------------
-    def _handle_in(self, request, payload, qty, location):
+    def _handle_in(self, request, payload, qty, location, tenant_id):
         """
         Lógica de ENTRADA (IN).
 
@@ -223,7 +245,7 @@ class ScanEndpoint(APIView):
         if incoming_uuid:
             product = Product.objects.filter(
                 id=incoming_uuid,
-                tenant_id=DEFAULT_TENANT,
+                tenant_id=tenant_id,
             ).first()
             if not product:
                 return self._error(
@@ -244,7 +266,7 @@ class ScanEndpoint(APIView):
                 quantity=abs(qty),
                 expiration_date=expiration_date,
                 notes=notes,
-                tenant_id=DEFAULT_TENANT,
+                tenant_id=tenant_id,
             )
 
             Movement.objects.create(
@@ -253,7 +275,7 @@ class ScanEndpoint(APIView):
                 quantity=abs(qty),
                 movement_type="IN",
                 metadata={"batch_id": batch.id, "entry_date": str(batch.entry_date)},
-                tenant_id=DEFAULT_TENANT,
+                tenant_id=tenant_id,
             )
 
             payload_str = product.qr_payload or f"PRD:{product.id}"
@@ -294,7 +316,7 @@ class ScanEndpoint(APIView):
         product, created = Product.objects.get_or_create(
             name=name,
             location=location,
-            tenant_id=DEFAULT_TENANT,
+            tenant_id=tenant_id,
             defaults={
                 "category": category,
                 "unit": unit,
@@ -309,7 +331,7 @@ class ScanEndpoint(APIView):
             quantity=abs(qty),
             expiration_date=expiration_date,
             notes=notes,
-            tenant_id=DEFAULT_TENANT,
+            tenant_id=tenant_id,
         )
 
         loc_final = location or product.location
@@ -325,7 +347,7 @@ class ScanEndpoint(APIView):
             quantity=abs(qty),
             movement_type="IN",
             metadata={"batch_id": batch.id, "entry_date": str(batch.entry_date)},
-            tenant_id=DEFAULT_TENANT,
+            tenant_id=tenant_id,
         )
 
         payload_str = product.qr_payload or f"PRD:{product.id}"
@@ -341,7 +363,7 @@ class ScanEndpoint(APIView):
             }
         )
 
-    def _handle_out(self, request, payload, qty, location, mark_open, open_days):
+    def _handle_out(self, request, payload, qty, location, mark_open, open_days, tenant_id):
         """
         Lógica de SALIDA (OUT), organizada en fases:
         - consumo de unidad abierta
@@ -385,7 +407,7 @@ class ScanEndpoint(APIView):
         # ---------------------------------------------------
         opened_batch = Batch.objects.filter(
             product_id=incoming_uuid,
-            tenant_id=DEFAULT_TENANT,
+            tenant_id=tenant_id,
             opened_units__gt=0,
             quantity__gt=0,
             is_depleted=False,
@@ -432,7 +454,7 @@ class ScanEndpoint(APIView):
                 quantity=-1,
                 movement_type="OUT",
                 metadata={"opened_batch": opened_batch.id},
-                tenant_id=DEFAULT_TENANT,
+                tenant_id=tenant_id,
             )
 
             return Response(
@@ -450,7 +472,7 @@ class ScanEndpoint(APIView):
         if mark_open:
             batch = Batch.objects.filter(
                 product_id=incoming_uuid,
-                tenant_id=DEFAULT_TENANT,
+                tenant_id=tenant_id,
                 is_depleted=False,
                 quantity__gt=0,
             ).order_by("expiration_date", "entry_date").first()
@@ -489,7 +511,7 @@ class ScanEndpoint(APIView):
         # ---------------------------------------------------
         product = Product.objects.filter(
             id=incoming_uuid,
-            tenant_id=DEFAULT_TENANT,
+            tenant_id=tenant_id,
         ).first()
         if not product:
             return self._error(
@@ -501,7 +523,7 @@ class ScanEndpoint(APIView):
         need = abs(qty)
 
         batch_total = (
-            Batch.objects.filter(product=product, tenant_id=DEFAULT_TENANT).aggregate(
+            Batch.objects.filter(product=product, tenant_id=tenant_id).aggregate(
                 t=Coalesce(Sum("quantity"), 0)
             )["t"]
             or 0
@@ -521,7 +543,7 @@ class ScanEndpoint(APIView):
                 Batch.objects.select_for_update()
                 .filter(
                     product=product,
-                    tenant_id=DEFAULT_TENANT,
+                    tenant_id=tenant_id,
                     quantity__gt=0,
                 )
                 .order_by(
@@ -583,11 +605,11 @@ class ScanEndpoint(APIView):
                 quantity=-need,
                 movement_type="OUT",
                 metadata={"consumed_batches": consumed},
-                tenant_id=DEFAULT_TENANT,
+                tenant_id=tenant_id,
             )
 
         stock_remaining = (
-            Batch.objects.filter(product=product, tenant_id=DEFAULT_TENANT).aggregate(
+            Batch.objects.filter(product=product, tenant_id=tenant_id).aggregate(
                 t=Coalesce(Sum("quantity"), 0)
             )["t"]
             or 0
@@ -595,7 +617,7 @@ class ScanEndpoint(APIView):
 
         remaining_qs = Batch.objects.filter(
             product=product,
-            tenant_id=DEFAULT_TENANT,
+            tenant_id=tenant_id,
             quantity__gt=0,
         ).exclude(expiration_date__isnull=True).order_by("expiration_date")
 
@@ -628,7 +650,7 @@ class ScanEndpoint(APIView):
             status=200,
         )
 
-    def _handle_aud(self, request, location):
+    def _handle_aud(self, request, location, tenant_id):
         if not location:
             return self._error(
                 "location_required",
@@ -637,11 +659,11 @@ class ScanEndpoint(APIView):
 
         location_qs = Location.objects.filter(
             id=location.id,
-            tenant_id=DEFAULT_TENANT,
+            tenant_id=tenant_id,
         )
 
         products = (
-            Product.objects.filter(location__in=location_qs, tenant_id=DEFAULT_TENANT)
+            Product.objects.filter(location__in=location_qs, tenant_id=tenant_id)
             .select_related("location")
             .prefetch_related("batches")
         )
@@ -695,15 +717,15 @@ class ScanEndpoint(APIView):
             status=200,
         )
 
-    def _handle_audtotal(self, request):
+    def _handle_audtotal(self, request, tenant_id):
         all_locations = Location.objects.filter(
-            tenant_id=DEFAULT_TENANT
+            tenant_id=tenant_id
         ).order_by("name")
         inventory = []
 
         for loc in all_locations:
             products = (
-                Product.objects.filter(location=loc, tenant_id=DEFAULT_TENANT)
+                Product.objects.filter(location=loc, tenant_id=tenant_id)
                 .select_related("location")
                 .prefetch_related("batches")
             )
@@ -767,6 +789,8 @@ class ScanEndpoint(APIView):
     # -------------------------
     def post(self, request):
         try:
+            tenant_id = get_tenant_from_request(request)
+
             try:
                 (
                     payload,
@@ -796,7 +820,7 @@ class ScanEndpoint(APIView):
 
                 location = Location.objects.filter(
                     public_id=loc_uuid,
-                    tenant_id=DEFAULT_TENANT,
+                    tenant_id=tenant_id,
                 ).first()
                 if not location:
                     return self._error(
@@ -807,7 +831,7 @@ class ScanEndpoint(APIView):
 
             # Enrutado por tipo
             if mtype == "IN":
-                return self._handle_in(request, payload, qty, location)
+                return self._handle_in(request, payload, qty, location, tenant_id)
 
             if mtype == "OUT":
                 return self._handle_out(
@@ -817,13 +841,14 @@ class ScanEndpoint(APIView):
                     location,
                     mark_open,
                     open_days,
+                    tenant_id,
                 )
 
             if mtype == "AUD":
-                return self._handle_aud(request, location)
+                return self._handle_aud(request, location, tenant_id)
 
             if mtype == "AUDTOTAL":
-                return self._handle_audtotal(request)
+                return self._handle_audtotal(request, tenant_id)
 
             return self._error(
                 "unknown_type",

@@ -1,0 +1,67 @@
+{% extends "inventory/Base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-slate-100 py-12">
+
+    <div class="w-full max-w-md bg-white rounded-xl shadow-lg border border-slate-200 p-8">
+
+        <h2 class="text-2xl font-bold text-center text-slate-800 mb-6">
+            Crear cuenta
+        </h2>
+
+        <form method="post" class="space-y-5">
+            {% csrf_token %}
+
+            {% if form.errors %}
+                <div class="p-3 bg-red-100 text-red-700 rounded-lg text-sm">
+                    Por favor revisa los campos.
+                </div>
+            {% endif %}
+
+            <div>
+                <label class="text-sm font-medium text-slate-700">Usuario</label>
+                <input type="text" name="username"
+                       value="{{ form.username.value|default_if_none:'' }}"
+                       class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 
+                              focus:border-teal-600 focus:ring-teal-600"
+                       required>
+                {{ form.username.errors }}
+            </div>
+
+            <div>
+                <label class="text-sm font-medium text-slate-700">Contraseña</label>
+                <input type="password" name="password1"
+                       class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 
+                              focus:border-teal-600 focus:ring-teal-600"
+                       required>
+                {{ form.password1.errors }}
+            </div>
+
+            <div>
+                <label class="text-sm font-medium text-slate-700">Repetir contraseña</label>
+                <input type="password" name="password2"
+                       class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 
+                              focus:border-teal-600 focus:ring-teal-600"
+                       required>
+                {{ form.password2.errors }}
+            </div>
+
+            <button type="submit"
+                class="w-full mt-4 bg-teal-600 hover:bg-teal-700 text-white font-medium 
+                       py-2 rounded-lg shadow">
+                Registrarse
+            </button>
+
+        </form>
+
+        <p class="mt-6 text-center text-sm text-slate-600">
+            ¿Ya tienes una cuenta?
+            <a href="{% url 'login' %}" class="text-teal-600 hover:underline">
+                Iniciar sesión
+            </a>
+        </p>
+
+    </div>
+</div>
+{% endblock %}

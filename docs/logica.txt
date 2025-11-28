@@ -1,0 +1,18 @@
+Rutas HTML (usuarios):
+
+Ruta	Tipo	Descripción
+/	HTML	Home
+/scan/	HTML	Pantalla de escaneo
+/scan/qr/	HTML	Procesado directo de QR clásico
+/scan/<uuid>/action/	HTML	Acción sobre lote (consumir/abrir)
+/ubicaciones/	HTML	Gestor de ubicaciones
+
+Rutas API (JSON oficiales):
+
+Ruta	Método	Descripción
+/api/scan/	POST	Movimientos IN/OUT/AUD/AUDTOTAL
+/api/products/search/	GET	Buscador rápido de productos
+/api/locations/tree/	GET	Obtener árbol de ubicaciones
+/api/locations/create/	POST	Crear ubicación
+/api/locations/update/<id>/	POST	Renombrar/mover ubicación
+/api/locations/delete/<id>/	POST	Borrar ubicación

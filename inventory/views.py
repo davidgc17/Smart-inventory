@@ -1,19 +1,51 @@
-# from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Location
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
-from .models import Product, Movement, Location
+from .models import Product, Movement, Location, Batch, DEFAULT_TENANT
 from django.contrib import messages
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth import login as auth_login
+from django.contrib.auth import logout as auth_logout 
+from django.conf import settings
 import json
 
-
+@login_required
 def home_view(request):
     return render(request, "inventory/home.html")
 
+@login_required
 def locations_manager(request):
     return render(request, "inventory/location_manager.html")
+
+def register(request):
+    """
+    Registro básico de usuario.
+    Crea un usuario nuevo y lo inicia sesión, luego redirige a 'home'.
+    """
+    if request.method == "POST":
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            # login automático tras crear el usuario
+            auth_login(request, user)
+            return redirect("home")
+    else:
+        form = UserCreationForm()
+
+    return render(request, "inventory/register.html", {"form": form})
+
+def logout_view(request):
+    """
+    Cierra la sesión del usuario y lo manda a la pantalla de login.
+    Acepta GET para simplificar el flujo en esta app.
+    """
+    auth_logout(request)
+    return redirect("login")
+
+
 
 def build_location_path(loc):
     """
@@ -28,9 +60,21 @@ def build_location_path(loc):
     # invertimos para que quede: raíz > ... > hijo
     return " > ".join(reversed(names))
 
+@login_required
 def scan_view(request):
-    # ubicaciones ordenadas por nombre (puedes cambiar el orden si quieres)
-    locations_qs = Location.objects.select_related("parent").order_by("name")
+    # Determinar el tenant del usuario actual
+    if request.user.is_authenticated and hasattr(request.user, "organization"):
+        tenant_id = request.user.organization.id
+    else:
+        tenant_id = DEFAULT_TENANT
+
+    # ubicaciones de ESTE tenant, ordenadas por nombre
+    locations_qs = (
+        Location.objects
+        .filter(tenant_id=tenant_id)
+        .select_related("parent")
+        .order_by("name")
+    )
 
     # le añadimos un atributo .path a cada objeto
     locations = []
@@ -38,14 +82,16 @@ def scan_view(request):
         loc.path = build_location_path(loc)
         locations.append(loc)
 
-    # el resto igual que lo tuvieras antes
+    # categorías y unidades SOLO de productos de este tenant
     categories = (
-        Product.objects.values_list("category", flat=True)
+        Product.objects.filter(tenant_id=tenant_id)
+        .values_list("category", flat=True)
         .distinct()
         .order_by("category")
     )
     units = (
-        Product.objects.values_list("unit", flat=True)
+        Product.objects.filter(tenant_id=tenant_id)
+        .values_list("unit", flat=True)
         .distinct()
         .order_by("unit")
     )
@@ -60,7 +106,7 @@ def scan_view(request):
         },
     )
 
-
+@login_required
 def scan_qr_view(request):
     """
     Procesa un QR concreto (ej: /scan/qr/?qr=PRD:xxxx)
@@ -112,6 +158,9 @@ def scan_qr_view(request):
     return redirect("scan")
 
 
+@login_required
+@require_http_methods(["POST"])
+@csrf_exempt
 def scan_action_view(request, batch_id):
     """
     Procesa la decisión del usuario después de la pantalla de decisión:
@@ -173,6 +222,12 @@ def scan_action_view(request, batch_id):
         return redirect("scan")
 
 
+
+# ============================================================
+# LEGACY ENDPOINT - NO USAR
+# Se mantiene solo como referencia histórica.
+# La API oficial de movimientos es /api/scan/ (ScanEndpoint en api.py).
+# ============================================================
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_scan(request):

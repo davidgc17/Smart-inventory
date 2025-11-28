@@ -1,0 +1,55 @@
+{% extends "inventory/Base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-slate-100 py-12">
+
+    <div class="w-full max-w-md bg-white rounded-xl shadow-lg border border-slate-200 p-8">
+
+        <h2 class="text-2xl font-bold text-center text-slate-800 mb-6">
+            Iniciar sesión
+        </h2>
+
+        <form method="post" class="space-y-5">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="p-3 bg-red-100 text-red-700 rounded-lg text-sm">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            <div>
+                <label class="text-sm font-medium text-slate-700">Usuario</label>
+                <input type="text" name="username"
+                       class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 
+                              focus:border-teal-600 focus:ring-teal-600"
+                       required>
+            </div>
+
+            <div>
+                <label class="text-sm font-medium text-slate-700">Contraseña</label>
+                <input type="password" name="password"
+                       class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 
+                              focus:border-teal-600 focus:ring-teal-600"
+                       required>
+            </div>
+
+            <button type="submit"
+                class="w-full mt-4 bg-teal-600 hover:bg-teal-700 text-white font-medium 
+                       py-2 rounded-lg shadow">
+                Entrar
+            </button>
+
+        </form>
+
+        <p class="mt-6 text-center text-sm text-slate-600">
+            ¿No tienes cuenta?
+            <a href="{% url 'register' %}" class="text-teal-600 hover:underline">
+                Crear una nueva cuenta
+            </a>
+        </p>
+
+    </div>
+</div>
+{% endblock %}

@@ -28,8 +28,9 @@ CSRF_TRUSTED_ORIGINS = [
     # "https://tu-dominio.com",  # producción
 ]
 
-LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/scan/'
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "home"
+LOGOUT_REDIRECT_URL = "login"
 
 DEFAULT_TENANT = "00000000-0000-0000-0000-000000000001"
 

@@ -10,7 +10,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login as auth_login
 from django.contrib.auth import logout as auth_logout 
 from django.conf import settings
-import json
+import json, os
 
 @login_required
 def home_view(request):
@@ -156,6 +156,25 @@ def scan_qr_view(request):
 
     messages.error(request, "No se pudo procesar la acción de escaneo.")
     return redirect("scan")
+
+
+@login_required
+def qr_list_view(request):
+    qr_dir = os.path.join(settings.MEDIA_ROOT, "qr")
+    qr_files = []
+
+    if os.path.exists(qr_dir):
+        for fname in os.listdir(qr_dir):
+            if fname.lower().endswith(".png"):
+                qr_files.append({
+                    "name": fname.replace("qr-", "").replace(".png", ""),
+                    "url": f"{settings.MEDIA_URL}qr/{fname}",
+                })
+
+    return render(request, "inventory/qr_list.html", {
+        "qr_files": qr_files,
+        "MEDIA_URL": settings.MEDIA_URL
+    })
 
 
 @login_required

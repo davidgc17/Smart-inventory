@@ -6,6 +6,9 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 import dj_database_url
+import environ
+env = environ.Env()
+environ.Env.read_env()
 
 # ---------------------------------------------------------------------
 # Base y .env
@@ -17,16 +20,10 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-secret")
 DEBUG = os.getenv("DEBUG", "True") == "True"
 
 # Puedes dejarlo por .env (coma-separado) o usar el default de abajo
-ALLOWED_HOSTS = os.getenv(
-    "ALLOWED_HOSTS",
-    "127.0.0.1,localhost,192.168.1.72"
-).split(",")
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["127.0.0.1"])
 
 # HTTPS dev por IP (si usas runserver_plus + mkcert). Añade tu IP real.
-CSRF_TRUSTED_ORIGINS = [
-    "https://192.168.1.72:8000",
-    # "https://tu-dominio.com",  # producción
-]
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "home"
@@ -125,7 +122,7 @@ STATICFILES_DIRS = [BASE_DIR / "static"]           # carpeta de trabajo (dev)
 STATIC_ROOT = BASE_DIR / "staticfiles"             # salida de collectstatic (prod)
 
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # ---------------------------------------------------------------------
 # DRF

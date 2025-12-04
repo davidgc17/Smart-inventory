@@ -12,3 +12,5 @@ urlpatterns = [
     path("", include("inventory.urls")),         # vistas HTML (incluye /scan/)
     path("api/", include("inventory.api")),      # API REST (incluye /api/scan/)
 ]
+
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

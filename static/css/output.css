@@ -6,6 +6,9 @@
 .mx-auto {
   margin-inline: auto;
 }
+.ml-auto {
+  margin-left: auto;
+}
 .block {
   display: block;
 }
@@ -36,8 +39,14 @@
 .w-1\/2 {
   width: calc(1/2 * 100%);
 }
+.w-fit {
+  width: fit-content;
+}
 .w-full {
   width: 100%;
+}
+.max-w-\[8rem\] {
+  max-width: 8rem;
 }
 .flex-1 {
   flex: 1;
@@ -47,6 +56,9 @@
 }
 .cursor-not-allowed {
   cursor: not-allowed;
+}
+.grid-cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .flex-col {
   flex-direction: column;
@@ -65,6 +77,11 @@
 }
 .justify-center {
   justify-content: center;
+}
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .overflow-hidden {
   overflow: hidden;
@@ -97,6 +114,9 @@
 .bg-\[\#d6ecec\] {
   background-color: #d6ecec;
 }
+.object-contain {
+  object-fit: contain;
+}
 .text-center {
   text-align: center;
 }
@@ -105,6 +125,9 @@
 }
 .text-\[11px\] {
   font-size: 11px;
+}
+.break-words {
+  overflow-wrap: break-word;
 }
 .italic {
   font-style: italic;

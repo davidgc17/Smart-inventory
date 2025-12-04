@@ -77,13 +77,13 @@
                 </a>
 
                 {% if user.is_authenticated %}
-                <span class="ml-6 text-sm text-slate-500">
-                    {{ user.username }}
-                </span>
-                <a href="{% url 'logout' %}"
-                class="px-3 py-1 rounded bg-red-500 hover:bg-red-600 text-white text-sm">
-                    Logout
-                </a>
+                    <div class="flex items-center gap-2 text-sm text-slate-700 ml-auto">
+                        <span class="truncate max-w-[8rem]">{{ user.username }}</span>
+                        <a href="{% url 'logout' %}"
+                        class="px-2 py-1 rounded bg-red-500 hover:bg-red-600 text-white text-xs sm:text-sm">
+                        Logout
+                        </a>
+                    </div>
                 {% endif %}
             </nav>
 
@@ -117,21 +117,27 @@
             class="md:hidden border-t border-slate-200 bg-white"
         >
             <div class="max-w-5xl mx-auto px-4 py-2 flex flex-col gap-1 text-sm font-medium">
-                <a href="{% url 'home' %}"
-                class="px-2 py-2 rounded-lg hover:bg-teal-50 text-slate-700"
-                @click="open = false">
+                <a href="{% url 'home' %}" class="px-2 py-2 rounded-lg hover:bg-teal-50 text-slate-700" @click="open = false">
                     Inicio
                 </a>
-                <a href="{% url 'scan' %}"
-                class="px-2 py-2 rounded-lg hover:bg-teal-50 text-slate-700"
-                @click="open = false">
+                <a href="{% url 'scan' %}" class="px-2 py-2 rounded-lg hover:bg-teal-50 text-slate-700" @click="open = false">
                     Inventario
                 </a>
-                <a href="{% url 'locations-manager' %}"
-                class="px-2 py-2 rounded-lg hover:bg-teal-50 text-slate-700"
-                @click="open = false">
+                <a href="{% url 'locations-manager' %}" class="px-2 py-2 rounded-lg hover:bg-teal-50 text-slate-700" @click="open = false">
                     Ubicaciones
                 </a>
+
+                {% if user.is_authenticated %}
+                <div class="mt-2 px-2 flex flex-col gap-1">
+                    <span class="text-sm text-slate-600 font-medium">
+                        {{ user.username }}
+                    </span>
+                    <a href="{% url 'logout' %}"
+                    class="w-fit px-3 py-1 rounded bg-red-500 hover:bg-red-600 text-white text-sm">
+                        Logout
+                    </a>
+                </div>
+                {% endif %}
             </div>
         </nav>
     </header>

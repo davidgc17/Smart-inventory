@@ -323,6 +323,13 @@ class ScanEndpoint(APIView):
                 "min_stock": int(new_data.get("min_stock") or 0),
                 "notes": notes,
                 "expiration_date": expiration_date,
+
+                # --- metadatos opcionales del producto (v0.1) ---
+                "brand": new_data.get("brand") or None,
+                "origin": new_data.get("origin") or None,
+                "primary_color": new_data.get("primary_color") or None,
+                "dimensions": new_data.get("dimensions") or None,
+                "estimated_value": new_data.get("estimated_value"),
             },
         )
 
@@ -651,25 +658,62 @@ class ScanEndpoint(APIView):
         )
 
     def _handle_aud(self, request, location, tenant_id):
-        if not location:
-            return self._error(
-                "location_required",
-                "Debes indicar una ubicación para la auditoría.",
-            )
+        # --- Lectura de filtros opcionales ---
+        data_in = request.data or {}
+        filters = data_in.get("audit_filters") or {}
 
-        location_qs = Location.objects.filter(
-            id=location.id,
-            tenant_id=tenant_id,
+        def _s(key):
+            v = filters.get(key)
+            return (v or "").strip()
+
+        f_name = _s("name")
+        f_category = _s("category")
+        f_brand = _s("brand")
+        f_origin = _s("origin")
+        f_color = _s("primary_color")
+        f_dimensions = _s("dimensions")
+
+        # --- Regla v0.1: al menos un criterio ---
+        has_any_filter = any(
+            [location, f_name, f_category, f_brand, f_origin, f_color, f_dimensions]
         )
 
+        if not has_any_filter:
+            return self._error(
+                "audit_filter_required",
+                "Debes indicar una ubicación o al menos un filtro de búsqueda.",
+            )
+
+        # --- Base queryset (siempre tenant-scoped) ---
         products = (
-            Product.objects.filter(location__in=location_qs, tenant_id=tenant_id)
+            Product.objects.filter(tenant_id=tenant_id)
             .select_related("location")
             .prefetch_related("batches")
         )
 
+        # --- Filtro por ubicación (si existe) ---
+        if location:
+            descendant_locations = location.descendants_qs(include_self=True)
+            products = products.filter(location__in=descendant_locations)
+
+        # --- Filtros combinables (AND) ---
+        if f_name:
+            products = products.filter(name__icontains=f_name)
+        if f_category:
+            products = products.filter(category__icontains=f_category)
+        if f_brand:
+            products = products.filter(brand__icontains=f_brand)
+        if f_origin:
+            products = products.filter(origin__icontains=f_origin)
+        if f_color:
+            products = products.filter(primary_color__icontains=f_color)
+        if f_dimensions:
+            products = products.filter(dimensions__icontains=f_dimensions)
+
         data = []
+
         for p in products:
+            # --- Lotes (LO QUE YA TENÍAS) ---
             all_batches = list(
                 p.batches.values(
                     "id",
@@ -696,9 +740,35 @@ class ScanEndpoint(APIView):
                 default=None,
             )
 
+            # --- Respuesta ampliada ---
             data.append(
                 {
+                    # Producto (info completa)
+                    "id": str(p.id),
+                    "sku": p.sku,
                     "product": p.name,
+                    "name": p.name,
+                    "category": p.category,
+                    "unit": p.unit,
+                    "min_stock": int(p.min_stock or 0),
+                    "notes": p.notes or "",
+                    "expiration_date": p.expiration_date.isoformat()
+                    if p.expiration_date
+                    else None,
+
+                    "brand": p.brand,
+                    "origin": p.origin,
+                    "primary_color": p.primary_color,
+                    "dimensions": p.dimensions,
+                    "estimated_value": float(p.estimated_value)
+                    if p.estimated_value is not None
+                    else None,
+
+                    "location": p.location.full_path()
+                    if hasattr(p.location, "full_path")
+                    else p.location.name,
+
+                    # Stock / lotes (sin tocar lógica)
                     "total_quantity": total_qty,
                     "nearest_expiration": nearest_exp,
                     "batches": non_empty_batches,
@@ -709,13 +779,22 @@ class ScanEndpoint(APIView):
             {
                 "ok": True,
                 "location": location.full_path()
-                if hasattr(location, "full_path")
-                else location.name,
+                if location and hasattr(location, "full_path")
+                else location.name if location else None,
+                "filters": {
+                    "name": f_name or None,
+                    "category": f_category or None,
+                    "brand": f_brand or None,
+                    "origin": f_origin or None,
+                    "primary_color": f_color or None,
+                    "dimensions": f_dimensions or None,
+                },
                 "total_products": len(data),
                 "items": data,
             },
             status=200,
         )
+
 
     def _handle_audtotal(self, request, tenant_id):
         all_locations = Location.objects.filter(

@@ -8,3 +8,7 @@ staticfiles/
 .vscode/
 checklist.docx
 tailwindcss.exe
+db.sqlite3
+*.sqlite3
+backups/
+static/css/output.css

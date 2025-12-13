@@ -265,6 +265,43 @@ class Product(models.Model):
 
     notes = models.TextField(blank=True, null=True)
 
+        # === v0.1-alpha — campos informativos opcionales ===
+    brand = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        db_index=True,
+    )
+
+    origin = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        db_index=True,
+    )
+
+    primary_color = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        db_index=True,
+    )
+
+    dimensions = models.CharField(
+        max_length=120,
+        blank=True,
+        null=True,
+        help_text="Formato libre, ej: 10x20x5 cm",
+    )
+
+    estimated_value = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        blank=True,
+        null=True,
+    )
+
+
     location = models.ForeignKey(
         Location,
         on_delete=models.SET_NULL,

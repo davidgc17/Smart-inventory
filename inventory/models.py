@@ -471,6 +471,17 @@ class Batch(models.Model):
     entry_date = models.DateField(auto_now_add=True)
     # Caducidad “cerrado” del lote
     expiration_date = models.DateField(null=True, blank=True)
+    # --- Metadatos específicos del lote (v0.1) ---
+    brand = models.CharField(max_length=100, blank=True, null=True)
+    origin = models.CharField(max_length=100, blank=True, null=True)
+    primary_color = models.CharField(max_length=50, blank=True, null=True)
+    dimensions = models.CharField(max_length=120, blank=True, null=True)
+    estimated_value = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        blank=True,
+        null=True
+    )
     notes = models.TextField(blank=True, null=True)
 
     # === Gestión de unidades abiertas dentro del lote ===

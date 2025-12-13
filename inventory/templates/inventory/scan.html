@@ -309,14 +309,23 @@ function showVal(v) {
   return (v !== null && v !== undefined && v !== '') ? v : '–';
 }
 
-function toggleDetails(btn) {
-  const container = btn.closest('.product-block');
-  const details = container.querySelector('.product-details');
-  const isHidden = details.classList.contains('hidden');
 
-  details.classList.toggle('hidden');
-  btn.textContent = isHidden ? '▴' : '▾';
+function toggleBatches(btn) {
+  const block = btn.closest('.product-block');
+  const batches = block.querySelector('.product-batches');
+
+  const isHidden = batches.classList.contains('hidden');
+  batches.classList.toggle('hidden');
+  btn.textContent = isHidden ? 'Ocultar lotes ▴' : 'Ver lotes ▾';
 }
+
+function formatDate(dateStr) {
+  if (!dateStr) return '–';
+  const d = new Date(dateStr);
+  if (isNaN(d)) return dateStr;
+  return d.toLocaleDateString('es-ES');
+}
+
 
 function renderProductBlock(it) {
   const name = showVal(it.product ?? it.name);
@@ -325,76 +334,93 @@ function renderProductBlock(it) {
 
   const category = showVal(it.category);
   const unit = showVal(it.unit);
-  const brand = showVal(it.brand);
-  const origin = showVal(it.origin);
-  const color = showVal(it.primary_color);
-  const dims = showVal(it.dimensions);
-  const value = (it.estimated_value !== null && it.estimated_value !== undefined && it.estimated_value !== '')
-    ? `${it.estimated_value} €`
-    : '–';
-  const notes = showVal(it.notes);
 
-  // Lotes (si vienen)
+  // Lotes
   const batches = Array.isArray(it.batches) ? it.batches : [];
   let batchesHtml = '';
+
   if (batches.length) {
-    batchesHtml = `
-      <div class="mt-3">
-        <div class="text-xs font-semibold text-slate-700 mb-1">Lotes</div>
-        <div class="space-y-1">
-          ${batches.map(b => {
-            const opened = (b.opened_units && b.opened_units > 0) ? b.opened_units : 0;
-            const openExp = b.open_expires_at ? b.open_expires_at : null;
+  batchesHtml = `
+    <div class="mt-2">
+      <button
+        type="button"
+        onclick="toggleBatches(this)"
+        class="text-xs text-blue-600 hover:underline mb-2"
+      >
+        Ver lotes (${batches.length}) ▾
+      </button>
 
-            // Si está abierto, queremos: Open: X · Exp(open): fecha
-            // Si no, queremos: Open: 0
-            const openLine = opened > 0
-              ? `<span class="text-orange-700 font-medium">
-                  <b>Open:</b> ${opened}${openExp ? ` · <b>Exp(open):</b> ${openExp}` : ''}
-                </span>`
-              : `<span><b>Open:</b> 0</span>`;
-
-            return `
-              <div class="text-xs text-slate-600 flex flex-wrap gap-x-3 gap-y-1">
-                <span><b>Exp:</b> ${showVal(b.expiration_date)}</span>
-                ${openLine}
+      <div class="product-batches hidden">
+        <div class="space-y-2">
+          ${batches.map(b => `
+            <div class="border rounded-md p-2 bg-slate-50">
+              <div class="text-xs text-slate-700 font-semibold mb-1">
+                Lote #${b.id}
               </div>
-            `;
-          }).join('')}
 
+              <div class="text-xs mb-2">
+                <b>Cantidad en este lote:</b> ${showVal(b.quantity)}
+              </div>
+
+              <div class="text-xs grid grid-cols-2 gap-x-3 gap-y-1">
+                <div><b>Marca:</b> ${showVal(b.brand)}</div>
+                <div><b>Origen:</b> ${showVal(b.origin)}</div>
+                <div><b>Color:</b> ${showVal(b.primary_color)}</div>
+                <div><b>Dimensiones:</b> ${showVal(b.dimensions)}</div>
+                <div><b>Valor estimado:</b> ${b.estimated_value != null ? b.estimated_value + " €" : "–"}</div>
+                <div><b>Notas:</b> ${showVal(b.notes)}</div>
+              </div>
+
+              <div class="mt-2 text-xs">
+                ${
+                  b.opened_units > 0
+                    ? `
+                      <div class="flex flex-col gap-0.5 text-red-700">
+                        <div>
+                          🔴 <b>Abierto:</b> ${b.opened_units} unidad${b.opened_units > 1 ? 'es' : ''}
+                        </div>
+                        <div class="ml-4 text-slate-600">
+                          ⏰ Consumir antes del <b>${formatDate(b.open_expires_at)}</b>
+                        </div>
+                      </div>
+                    `
+                    : `
+                      <div class="text-slate-500">
+                        🟢 <b>Cerrado</b>
+                      </div>
+                    `
+                }
+              </div>
+
+            </div>
+          `).join("")}
         </div>
-      </div>
-    `;
-  }
-
-  return `
-    <div class="product-block border border-slate-200 rounded-lg p-3 bg-white">
-      <div class="flex items-start justify-between gap-3">
-        <div class="min-w-0">
-          <div class="font-semibold text-slate-900 truncate">${name}</div>
-          <div class="text-sm text-slate-600 mt-0.5">
-            Cantidad: <b>${qty}</b> · Caducidad próxima: <b>${nearest}</b>
-          </div>
-        </div>
-        <button type="button"
-          class="shrink-0 w-8 h-8 rounded hover:bg-slate-100 text-slate-700"
-          onclick="toggleDetails(this)">▾</button>
-      </div>
-
-      <div class="product-details hidden mt-3 text-sm text-slate-700 space-y-1">
-        <div><b>Categoría:</b> ${category}</div>
-        <div><b>Unidad:</b> ${unit}</div>
-        <div><b>Marca:</b> ${brand}</div>
-        <div><b>Origen:</b> ${origin}</div>
-        <div><b>Color:</b> ${color}</div>
-        <div><b>Dimensiones:</b> ${dims}</div>
-        <div><b>Valor estimado:</b> ${value}</div>
-        <div><b>Notas:</b> ${notes}</div>
-        ${batchesHtml}
       </div>
     </div>
   `;
 }
+
+
+  return `
+    <div class="product-block border border-slate-200 rounded-lg p-3 bg-white">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <div class="font-semibold text-slate-800">${name}</div>
+          <div class="text-sm text-slate-600">
+            Cantidad: <b>${qty}</b>
+            · Categoría: <b>${category}</b>
+            · Unidad: <b>${unit}</b>
+            · Caducidad próxima: <b>${nearest}</b>
+          </div>
+        </div>
+      </div>
+
+      ${batchesHtml}
+    </div>
+  `;
+}
+
+
 
 
 

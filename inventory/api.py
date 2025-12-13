@@ -265,8 +265,15 @@ class ScanEndpoint(APIView):
                 product=product,
                 quantity=abs(qty),
                 expiration_date=expiration_date,
-                notes=notes,
                 tenant_id=tenant_id,
+
+                # --- Metadatos específicos del lote ---
+                brand=new_data.get("brand"),
+                origin=new_data.get("origin"),
+                primary_color=new_data.get("primary_color"),
+                dimensions=new_data.get("dimensions"),
+                estimated_value=new_data.get("estimated_value") or None,
+                notes=new_data.get("notes"),
             )
 
             Movement.objects.create(
@@ -321,15 +328,6 @@ class ScanEndpoint(APIView):
                 "category": category,
                 "unit": unit,
                 "min_stock": int(new_data.get("min_stock") or 0),
-                "notes": notes,
-                "expiration_date": expiration_date,
-
-                # --- metadatos opcionales del producto (v0.1) ---
-                "brand": new_data.get("brand") or None,
-                "origin": new_data.get("origin") or None,
-                "primary_color": new_data.get("primary_color") or None,
-                "dimensions": new_data.get("dimensions") or None,
-                "estimated_value": new_data.get("estimated_value"),
             },
         )
 
@@ -722,6 +720,14 @@ class ScanEndpoint(APIView):
                     "opened_units",
                     "opened_at",
                     "open_expires_at",
+
+                    # 🔽 metadatos por LOTE
+                    "brand",
+                    "origin",
+                    "primary_color",
+                    "dimensions",
+                    "estimated_value",
+                    "notes",
                 ).order_by("expiration_date")
             )
 

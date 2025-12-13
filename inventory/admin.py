@@ -128,16 +128,56 @@ class MovementAdmin(admin.ModelAdmin):
 # -------------------------------------------------------------------
 #  BATCH ADMIN (vista independiente)
 # -------------------------------------------------------------------
+from django.contrib import admin
+from .models import Batch
+
+
 @admin.register(Batch)
 class BatchAdmin(admin.ModelAdmin):
-    list_display = ("product", "location_path", "quantity", "entry_date", "expiration_date", "notes")
+    # --- Listado ---
+    list_display = (
+        "product",
+        "location_path",
+        "quantity",
+        "expiration_date",
+        "opened_units",
+        "open_expires_at",
+        "brand",
+        "origin",
+        "estimated_value",
+    )
     list_filter = ("expiration_date",)
     search_fields = ("product__name", "product__location__name")
     ordering = ("-entry_date",)
 
+    # --- Formulario de edición ---
+    fields = (
+        "product",
+        "quantity",
+        "expiration_date",
+
+        # Estado de apertura
+        "opened_units",
+        "opened_at",
+        "open_expires_at",
+
+        # Metadatos específicos del lote
+        "brand",
+        "origin",
+        "primary_color",
+        "dimensions",
+        "estimated_value",
+        "notes",
+    )
+
+    # --- Utilidades ---
     def location_path(self, obj):
         """Ruta completa de la ubicación del producto asociado al lote."""
         if obj.product and obj.product.location:
             return obj.product.location.full_path()
         return "(sin ubicación)"
+
     location_path.short_description = "Ubicación completa"
+
+
+

@@ -62,6 +62,51 @@
         <option value="AUD">Auditoría</option>
         <option value="AUDTOTAL">Auditoría total</option>
       </select>
+      <!-- Búsqueda avanzada (solo AUD) -->
+      <div id="aud-filters" class="space-y-4 hidden mt-4">
+        <div>
+          <label for="aud_name" class="block font-medium text-slate-800">Nombre</label>
+          <input id="aud_name" type="text"
+                class="w-full border border-slate-300 rounded px-3 py-2"
+                placeholder="Ej: camiseta" />
+        </div>
+
+        <div>
+          <label for="aud_category" class="block font-medium text-slate-800">Categoría</label>
+          <input id="aud_category" type="text"
+                class="w-full border border-slate-300 rounded px-3 py-2"
+                placeholder="Ej: ropa" />
+        </div>
+
+        <div>
+          <label for="aud_brand" class="block font-medium text-slate-800">Marca</label>
+          <input id="aud_brand" type="text"
+                class="w-full border border-slate-300 rounded px-3 py-2"
+                placeholder="Ej: Bosch" />
+        </div>
+
+        <div>
+          <label for="aud_origin" class="block font-medium text-slate-800">Origen</label>
+          <input id="aud_origin" type="text"
+                class="w-full border border-slate-300 rounded px-3 py-2"
+                placeholder="Ej: Alemania" />
+        </div>
+
+        <div>
+          <label for="aud_primary_color" class="block font-medium text-slate-800">Color principal</label>
+          <input id="aud_primary_color" type="text"
+                class="w-full border border-slate-300 rounded px-3 py-2"
+                placeholder="Ej: Azul" />
+        </div>
+
+        <div>
+          <label for="aud_dimensions" class="block font-medium text-slate-800">Dimensiones</label>
+          <input id="aud_dimensions" type="text"
+                class="w-full border border-slate-300 rounded px-3 py-2"
+                placeholder="Ej: 10x20x5 cm" />
+        </div>
+      </div>
+
     </div>
 
     <div id="open-options" class="space-y-3 hidden">
@@ -102,6 +147,62 @@
         <label for="new_expiration_date" class="block font-medium text-slate-800">Fecha de caducidad</label>
         <input id="new_expiration_date" type="date" class="w-full border border-slate-300 rounded px-3 py-2" />
       </div>
+      <!-- --- Metadatos opcionales del producto (v0.1) --- -->
+
+      <div>
+        <label for="new_brand" class="block font-medium text-slate-800">Marca</label>
+        <input
+          id="new_brand"
+          type="text"
+          class="w-full border border-slate-300 rounded px-3 py-2"
+          placeholder="Ej: Bosch"
+        />
+      </div>
+
+      <div>
+        <label for="new_origin" class="block font-medium text-slate-800">Origen</label>
+        <input
+          id="new_origin"
+          type="text"
+          class="w-full border border-slate-300 rounded px-3 py-2"
+          placeholder="Ej: Lidl"
+        />
+      </div>
+
+      <div>
+        <label for="new_primary_color" class="block font-medium text-slate-800">Color principal</label>
+        <input
+          id="new_primary_color"
+          type="text"
+          class="w-full border border-slate-300 rounded px-3 py-2"
+          placeholder="Ej: Azul"
+        />
+      </div>
+
+      <div>
+        <label for="new_dimensions" class="block font-medium text-slate-800">Dimensiones</label>
+        <input
+          id="new_dimensions"
+          type="text"
+          class="w-full border border-slate-300 rounded px-3 py-2"
+          placeholder="Ej: 10x20x5 cm"
+        />
+      </div>
+
+      <div>
+        <label for="new_estimated_value" class="block font-medium text-slate-800">
+          Valor estimado (€)
+        </label>
+        <input
+          id="new_estimated_value"
+          type="number"
+          step="0.01"
+          min="0"
+          class="w-full border border-slate-300 rounded px-3 py-2"
+          placeholder="Ej: 49.99"
+        />
+      </div>
+
       <div>
         <label for="new_notes" class="block font-medium text-slate-800">Notas</label>
         <textarea id="new_notes" class="w-full border border-slate-300 rounded px-3 py-2"></textarea>
@@ -200,6 +301,103 @@ const $AUD = () => document.getElementById('audit-section');
 function clearOUT() { $OUT().innerHTML = ''; }
 function clearAUD() { $AUD().innerHTML = ''; }
 
+
+// =============================
+// 🧱 RENDER (bloque de producto)
+// =============================
+function showVal(v) {
+  return (v !== null && v !== undefined && v !== '') ? v : '–';
+}
+
+function toggleDetails(btn) {
+  const container = btn.closest('.product-block');
+  const details = container.querySelector('.product-details');
+  const isHidden = details.classList.contains('hidden');
+
+  details.classList.toggle('hidden');
+  btn.textContent = isHidden ? '▴' : '▾';
+}
+
+function renderProductBlock(it) {
+  const name = showVal(it.product ?? it.name);
+  const qty = showVal(it.total_quantity);
+  const nearest = showVal(it.nearest_expiration);
+
+  const category = showVal(it.category);
+  const unit = showVal(it.unit);
+  const brand = showVal(it.brand);
+  const origin = showVal(it.origin);
+  const color = showVal(it.primary_color);
+  const dims = showVal(it.dimensions);
+  const value = (it.estimated_value !== null && it.estimated_value !== undefined && it.estimated_value !== '')
+    ? `${it.estimated_value} €`
+    : '–';
+  const notes = showVal(it.notes);
+
+  // Lotes (si vienen)
+  const batches = Array.isArray(it.batches) ? it.batches : [];
+  let batchesHtml = '';
+  if (batches.length) {
+    batchesHtml = `
+      <div class="mt-3">
+        <div class="text-xs font-semibold text-slate-700 mb-1">Lotes</div>
+        <div class="space-y-1">
+          ${batches.map(b => {
+            const opened = (b.opened_units && b.opened_units > 0) ? b.opened_units : 0;
+            const openExp = b.open_expires_at ? b.open_expires_at : null;
+
+            // Si está abierto, queremos: Open: X · Exp(open): fecha
+            // Si no, queremos: Open: 0
+            const openLine = opened > 0
+              ? `<span class="text-orange-700 font-medium">
+                  <b>Open:</b> ${opened}${openExp ? ` · <b>Exp(open):</b> ${openExp}` : ''}
+                </span>`
+              : `<span><b>Open:</b> 0</span>`;
+
+            return `
+              <div class="text-xs text-slate-600 flex flex-wrap gap-x-3 gap-y-1">
+                <span><b>Exp:</b> ${showVal(b.expiration_date)}</span>
+                ${openLine}
+              </div>
+            `;
+          }).join('')}
+
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="product-block border border-slate-200 rounded-lg p-3 bg-white">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="font-semibold text-slate-900 truncate">${name}</div>
+          <div class="text-sm text-slate-600 mt-0.5">
+            Cantidad: <b>${qty}</b> · Caducidad próxima: <b>${nearest}</b>
+          </div>
+        </div>
+        <button type="button"
+          class="shrink-0 w-8 h-8 rounded hover:bg-slate-100 text-slate-700"
+          onclick="toggleDetails(this)">▾</button>
+      </div>
+
+      <div class="product-details hidden mt-3 text-sm text-slate-700 space-y-1">
+        <div><b>Categoría:</b> ${category}</div>
+        <div><b>Unidad:</b> ${unit}</div>
+        <div><b>Marca:</b> ${brand}</div>
+        <div><b>Origen:</b> ${origin}</div>
+        <div><b>Color:</b> ${color}</div>
+        <div><b>Dimensiones:</b> ${dims}</div>
+        <div><b>Valor estimado:</b> ${value}</div>
+        <div><b>Notas:</b> ${notes}</div>
+        ${batchesHtml}
+      </div>
+    </div>
+  `;
+}
+
+
+
 // =============================
 // 🔎 AUTOCOMPLETADO DE PRODUCTOS
 // =============================
@@ -271,7 +469,7 @@ async function enviar() {
   const mtype = document.getElementById('mtype').value;
 
   // Limpiar contenedores según tipo
-  if (mtype === 'OUT' || mtype === 'IN' || mtype === 'ADJ') clearOUT();
+  if (mtype === 'OUT' || mtype === 'ADJ') clearOUT();
   if (mtype === 'AUD' || mtype === 'AUDTOTAL') clearAUD();
 
   const payloadRaw = (document.getElementById('payload').value || '').trim();
@@ -283,6 +481,12 @@ async function enviar() {
   const newMinStockEl   = document.getElementById('new_min_stock');
   const newNotesEl      = document.getElementById('new_notes');
   const newExpDateEl    = document.getElementById('new_expiration_date');
+  const newBrandEl        = document.getElementById('new_brand');
+  const newOriginEl       = document.getElementById('new_origin');
+  const newColorEl        = document.getElementById('new_primary_color');
+  const newDimensionsEl   = document.getElementById('new_dimensions');
+  const newValueEl        = document.getElementById('new_estimated_value');
+
 
   // Reset visual de errores en campos de IN
   if (newNameEl) {
@@ -360,6 +564,19 @@ async function enviar() {
       open_days: document.getElementById("open_days")?.value || null,
   };
 
+  // --- Auditoría: enviar filtros avanzados ---
+if (mtype === 'AUD') {
+  body.audit_filters = {
+    name: (document.getElementById('aud_name')?.value || '').trim(),
+    category: (document.getElementById('aud_category')?.value || '').trim(),
+    brand: (document.getElementById('aud_brand')?.value || '').trim(),
+    origin: (document.getElementById('aud_origin')?.value || '').trim(),
+    primary_color: (document.getElementById('aud_primary_color')?.value || '').trim(),
+    dimensions: (document.getElementById('aud_dimensions')?.value || '').trim(),
+  };
+}
+
+
   if (mtype === 'IN') {
     body.new_product = {
       name: newNameEl?.value || '',
@@ -368,6 +585,15 @@ async function enviar() {
       min_stock: parseInt(newMinStockEl?.value || '0'),
       notes: newNotesEl?.value || '',
       expiration_date: newExpDateEl?.value || null,
+
+      // --- metadatos opcionales (v0.1) ---
+      brand: newBrandEl?.value || '',
+      origin: newOriginEl?.value || '',
+      primary_color: newColorEl?.value || '',
+      dimensions: newDimensionsEl?.value || '',
+      estimated_value: newValueEl?.value
+        ? parseFloat(newValueEl.value)
+        : null,
     };
   }
 
@@ -386,72 +612,64 @@ async function enviar() {
     const headersObj = {};
     res.headers.forEach((v, k) => headersObj[k] = v);
 
-    // AUDITORÍA TOTAL — versión simplificada y fiable (render SOLO en #audit-section)
-    if (mtype === 'AUDTOTAL') {
-      const inv = data?.data?.inventory || data?.inventory || data?.data?.data?.inventory;
-      const total = data?.data?.total_locations || data?.total_locations || data?.data?.data?.total_locations;
+    // --- AUDITORÍA: si no hay resultados, mostrar mensaje y salir ---
+    if (mtype === 'AUD') {
+      const items = data?.items || data?.data?.items || data?.data?.data?.items || [];
+      const total = data?.total_products ?? data?.data?.total_products ?? data?.data?.data?.total_products ?? items.length;
 
-      if (!inv || !Array.isArray(inv)) {
+      if (Array.isArray(items) && items.length === 0) {
         $AUD().innerHTML = `
-          <div class="p-4 bg-red-100 text-red-700 rounded">
-            <strong>Error:</strong> No se pudo leer el inventario desde la respuesta del servidor.
+          <div class="p-4 bg-yellow-50 border border-yellow-300 rounded text-slate-800">
+            No se encontró ningún producto con los criterios indicados.
           </div>
-          <pre class="mt-2 text-xs text-gray-600 overflow-x-auto">${JSON.stringify(data, null, 2)}</pre>
         `;
         return;
       }
-
-      let html = `
-        <h2 class="text-2xl font-bold text-blue-600 mb-3">📦 Auditoría total</h2>
-        <p class="text-sm text-gray-700 mb-6">Total de ubicaciones: <b>${total || inv.length}</b></p>
-      `;
-
-      inv.forEach(loc => {
-        html += `
-          <div class="border border-gray-300 rounded-lg p-4 mb-5 bg-gray-50">
-            <h3 class="text-lg font-semibold text-gray-800 mb-2">${loc.location}</h3>
-            <p class="text-sm text-gray-600 mb-3">Productos en esta ubicación: <b>${loc.total_products}</b></p>
-            <table class="w-full border-collapse text-sm bg-white rounded-lg overflow-hidden">
-              <thead class="bg-gray-200 text-gray-800">
-                <tr>
-                  <th class="border px-3 py-2 text-left">Producto</th>
-                  <th class="border px-3 py-2 text-center">Cantidad total</th>
-                  <th class="border px-3 py-2 text-center">Caducidad más próxima</th>
-                  <th class="border px-3 py-2 text-left">Lotes</th>
-                </tr>
-              </thead>
-              <tbody>
-        `;
-        (loc.items || []).forEach(it => {
-          const lotes = it.batches?.length
-            ? it.batches.map(b => {
-                const openedInfo = (b.opened_units && b.opened_units > 0)
-                  ? ` — ${b.opened_units} abierta${b.opened_units > 1 ? 's' : ''}` +
-                    (b.open_expires_at ? ` (hasta ${b.open_expires_at})` : '')
-                  : '';
-                return `#${b.id} (${b.quantity}u, ${b.expiration_date || '-'})${openedInfo}`;
-              }).join("<br>")
-            : '<span class="text-gray-400 italic">Sin lotes</span>';
-
-          html += `
-            <tr class="hover:bg-gray-50">
-              <td class="border px-3 py-2 font-medium">${it.product}</td>
-              <td class="border px-3 py-2 text-center">${it.total_quantity}</td>
-              <td class="border px-3 py-2 text-center">${it.nearest_expiration || '-'}</td>
-              <td class="border px-3 py-2">${lotes}</td>
-            </tr>
-          `;
-        });
-        html += `
-              </tbody>
-            </table>
-          </div>
-        `;
-      });
-
-      $AUD().innerHTML = html;
-      return;
     }
+
+
+    // AUDITORÍA TOTAL — versión simplificada y fiable (render SOLO en #audit-section)
+if (mtype === 'AUDTOTAL') {
+  const inv = data?.data?.inventory || data?.inventory || data?.data?.data?.inventory;
+  const total = data?.data?.total_locations || data?.total_locations || data?.data?.data?.total_locations;
+
+  if (!inv || !Array.isArray(inv)) {
+    $AUD().innerHTML = `
+      <div class="p-4 bg-red-100 text-red-700 rounded">
+        <strong>Error:</strong> No se pudo leer el inventario desde la respuesta del servidor.
+      </div>
+      <pre class="mt-2 text-xs text-gray-600 overflow-x-auto">${JSON.stringify(data, null, 2)}</pre>
+    `;
+    return;
+  }
+
+  let html = `
+    <h2 class="text-2xl font-bold text-blue-600 mb-3">📦 Auditoría total</h2>
+    <p class="text-sm text-gray-700 mb-6">
+      Total de ubicaciones: <b>${total || inv.length}</b>
+    </p>
+  `;
+
+  inv.forEach(loc => {
+    const blocks = (loc.items || []).map(it => renderProductBlock(it)).join("");
+
+    html += `
+      <div class="border border-gray-300 rounded-lg p-4 mb-5 bg-gray-50">
+        <h3 class="text-lg font-semibold text-gray-800 mb-2">${loc.location}</h3>
+        <p class="text-sm text-gray-600 mb-3">
+          Productos en esta ubicación: <b>${loc.total_products}</b>
+        </p>
+        <div class="space-y-3">
+          ${blocks || '<div class="text-sm text-gray-400 italic">Sin productos</div>'}
+        </div>
+      </div>
+    `;
+  });
+
+  $AUD().innerHTML = html;
+  return;
+}
+
 
     // ENTRADA (IN) — QR + tarjeta bonita en OUT y salir
     if (mtype === 'IN') {
@@ -594,48 +812,21 @@ async function enviar() {
 
     // AUD — render SOLO en #audit-section
     if (mtype === "AUD" && data && data.items) {
-      const rows = data.items.map(item => {
-        const lotes = item.batches.map(b => {
-          const openInfo = (b.opened_units && b.opened_units > 0)
-            ? ` ⭐ abierto${b.opened_units > 1 ? "s" : ""}` +
-              (b.open_expires_at ? ` (hasta ${b.open_expires_at})` : "")
-            : "";
-
-          return `
-            <li>
-              Lote #${b.id}
-              — ${b.quantity} u.
-              ${b.expiration_date ? `(caduca: ${b.expiration_date})` : ""}
-              ${openInfo}
-            </li>
-          `;
-        }).join("");
-
-        return `
-          <tr>
-            <td class="border px-3 py-2 font-medium">${item.product}</td>
-            <td class="border px-3 py-2 text-center">${item.total_quantity}</td>
-            <td class="border px-3 py-2 text-center">${item.nearest_expiration || "-"}</td>
-            <td class="border px-3 py-2"><ul>${lotes}</ul></td>
-          </tr>`;
-      }).join("");
+      const blocks = (data.items || []).map(it => renderProductBlock(it)).join("");
 
       const html = `
         <h3 class="text-lg font-semibold mb-2">Auditoría — ${data.location}</h3>
-        <p class="text-sm text-gray-600 mb-2">Total productos: <b>${data.total_products}</b></p>
-        <table class="border-collapse w-full text-sm">
-          <thead>
-            <tr class="bg-gray-200">
-              <th class="border px-3 py-2 text-left">Producto</th>
-              <th class="border px-3 py-2 text-center">Cantidad total</th>
-              <th class="border px-3 py-2 text-center">Caducidad más próxima</th>
-              <th class="border px-3 py-2 text-left">Lotes</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>`;
+        <p class="text-sm text-gray-600 mb-3">
+          Total productos: <b>${data.total_products}</b>
+        </p>
+        <div class="space-y-3">
+          ${blocks}
+        </div>
+      `;
+
       $AUD().innerHTML = html;
-    } else {
+    }
+    else {
       // Fallback: JSON crudo al contenedor correspondiente
       const target = (mtype === 'AUD' || mtype === 'AUDTOTAL') ? $AUD() : $OUT();
       target.innerHTML = `
@@ -778,6 +969,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const tipoSelect = document.getElementById('mtype');
   const extraForm = document.getElementById('entrada-extra');
   const openOptions = document.getElementById('open-options');
+  const audFilters = document.getElementById('aud-filters');
+
 
   function updateVisibility() {
       const t = tipoSelect.value;
@@ -789,6 +982,10 @@ document.addEventListener('DOMContentLoaded', () => {
       // Mostrar solo si tipo = OUT
       if (t === 'OUT') openOptions.classList.remove('hidden');
       else openOptions.classList.add('hidden');
+
+      if (t === 'AUD') audFilters.classList.remove('hidden');
+      else audFilters.classList.add('hidden');
+
   }
 
   tipoSelect.addEventListener('change', updateVisibility);

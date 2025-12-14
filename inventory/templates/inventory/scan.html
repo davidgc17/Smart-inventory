@@ -11,12 +11,13 @@
   <h2 class="text-xl font-semibold text-slate-900">Cámara</h2>
   <div class="flex flex-wrap items-center gap-4 mb-4">
     <button id="switchBtn" type="button"
-            class="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition">
+      class="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition">
       Cambiar cámara
     </button>
     <span id="cam-status" class="text-sm text-slate-700">Esperando permisos de la cámara…</span>
   </div>
-  <div id="reader" class="w-full max-w-sm max-h-[40vh] sm:max-h-[60vh] overflow-hidden border border-slate-300 rounded bg-white"></div>
+  <div id="reader"
+    class="w-full max-w-sm max-h-[40vh] sm:max-h-[60vh] overflow-hidden border border-slate-300 rounded bg-white"></div>
 
   <!-- Formulario manual -->
   <h2 class="text-xl font-semibold mt-6 text-slate-900">Formulario manual</h2>
@@ -26,9 +27,9 @@
     <!-- 🔎 Buscador con autocompletado -->
     <div>
       <label for="productSearch" class="block font-medium text-slate-800">Buscar producto</label>
-      <input id="productSearch" class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-             placeholder="Escribe nombre, SKU o PRD..."
-             list="productSearchResults" autocomplete="off" />
+      <input id="productSearch"
+        class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+        placeholder="Escribe nombre, SKU o PRD..." list="productSearchResults" autocomplete="off" />
       <datalist id="productSearchResults"></datalist>
       <p class="text-xs text-slate-500 mt-1">
         Al seleccionar una sugerencia se rellenará el campo Payload automáticamente.
@@ -37,25 +38,28 @@
 
     <div>
       <label for="payload" class="block font-medium text-slate-800">Payload (PRD:&lt;uuid&gt;)</label>
-      <input id="payload" class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+      <input id="payload"
+        class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
     </div>
 
     <div>
       <label for="loc" class="block font-medium text-slate-800">Ubicación</label>
-      <select id="loc" class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+      <select id="loc"
+        class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
         <option value="" disabled selected>--- Elige ubicación ---</option>
         {% for loc in locations %}
-          <!-- value = public_id (UUID), texto = ruta completa -->
-          <option value="{{ loc.public_id }}">{{ loc.path }}</option>
+        <!-- value = public_id (UUID), texto = ruta completa -->
+        <option value="{{ loc.public_id }}">{{ loc.path }}</option>
         {% empty %}
-          <option disabled>No hay ubicaciones disponibles</option>
+        <option disabled>No hay ubicaciones disponibles</option>
         {% endfor %}
       </select>
     </div>
 
     <div>
       <label for="mtype" class="block font-medium text-slate-800">Tipo</label>
-      <select id="mtype" class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+      <select id="mtype"
+        class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
         <option value="OUT">Salida</option>
         <option value="IN">Entrada</option>
         <option value="ADJ">Ajuste</option>
@@ -66,44 +70,38 @@
       <div id="aud-filters" class="space-y-4 hidden mt-4">
         <div>
           <label for="aud_name" class="block font-medium text-slate-800">Nombre</label>
-          <input id="aud_name" type="text"
-                class="w-full border border-slate-300 rounded px-3 py-2"
-                placeholder="Ej: camiseta" />
+          <input id="aud_name" type="text" class="w-full border border-slate-300 rounded px-3 py-2"
+            placeholder="Ej: camiseta" />
         </div>
 
         <div>
           <label for="aud_category" class="block font-medium text-slate-800">Categoría</label>
-          <input id="aud_category" type="text"
-                class="w-full border border-slate-300 rounded px-3 py-2"
-                placeholder="Ej: ropa" />
+          <input id="aud_category" type="text" class="w-full border border-slate-300 rounded px-3 py-2"
+            placeholder="Ej: ropa" />
         </div>
 
         <div>
           <label for="aud_brand" class="block font-medium text-slate-800">Marca</label>
-          <input id="aud_brand" type="text"
-                class="w-full border border-slate-300 rounded px-3 py-2"
-                placeholder="Ej: Bosch" />
+          <input id="aud_brand" type="text" class="w-full border border-slate-300 rounded px-3 py-2"
+            placeholder="Ej: Bosch" />
         </div>
 
         <div>
           <label for="aud_origin" class="block font-medium text-slate-800">Origen</label>
-          <input id="aud_origin" type="text"
-                class="w-full border border-slate-300 rounded px-3 py-2"
-                placeholder="Ej: Alemania" />
+          <input id="aud_origin" type="text" class="w-full border border-slate-300 rounded px-3 py-2"
+            placeholder="Ej: Alemania" />
         </div>
 
         <div>
           <label for="aud_primary_color" class="block font-medium text-slate-800">Color principal</label>
-          <input id="aud_primary_color" type="text"
-                class="w-full border border-slate-300 rounded px-3 py-2"
-                placeholder="Ej: Azul" />
+          <input id="aud_primary_color" type="text" class="w-full border border-slate-300 rounded px-3 py-2"
+            placeholder="Ej: Azul" />
         </div>
 
         <div>
           <label for="aud_dimensions" class="block font-medium text-slate-800">Dimensiones</label>
-          <input id="aud_dimensions" type="text"
-                class="w-full border border-slate-300 rounded px-3 py-2"
-                placeholder="Ej: 10x20x5 cm" />
+          <input id="aud_dimensions" type="text" class="w-full border border-slate-300 rounded px-3 py-2"
+            placeholder="Ej: 10x20x5 cm" />
         </div>
       </div>
 
@@ -117,11 +115,9 @@
 
       <div>
         <label for="open_days" class="block font-medium text-slate-800">Días de vida tras abrir</label>
-        <input id="open_days"
-              type="number"
-              min="1"
-              class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-              placeholder="Ej: 7 para caducar en 7 días" />
+        <input id="open_days" type="number" min="1"
+          class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+          placeholder="Ej: 7 para caducar en 7 días" />
       </div>
     </div>
 
@@ -129,7 +125,8 @@
     <div id="entrada-extra" class="space-y-4 hidden mt-4">
       <div>
         <label for="new_name" class="block font-medium text-slate-800">Nombre del producto</label>
-        <input id="new_name" class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+        <input id="new_name"
+          class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
       </div>
       <div>
         <label for="new_category" class="block font-medium text-slate-800">Categoría</label>
@@ -137,7 +134,8 @@
       </div>
       <div>
         <label for="new_unit" class="block font-medium text-slate-800">Unidad</label>
-        <input id="new_unit" class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+        <input id="new_unit"
+          class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
       </div>
       <div>
         <label for="new_min_stock" class="block font-medium text-slate-800">Stock mínimo</label>
@@ -151,56 +149,34 @@
 
       <div>
         <label for="new_brand" class="block font-medium text-slate-800">Marca</label>
-        <input
-          id="new_brand"
-          type="text"
-          class="w-full border border-slate-300 rounded px-3 py-2"
-          placeholder="Ej: Bosch"
-        />
+        <input id="new_brand" type="text" class="w-full border border-slate-300 rounded px-3 py-2"
+          placeholder="Ej: Bosch" />
       </div>
 
       <div>
         <label for="new_origin" class="block font-medium text-slate-800">Origen</label>
-        <input
-          id="new_origin"
-          type="text"
-          class="w-full border border-slate-300 rounded px-3 py-2"
-          placeholder="Ej: Lidl"
-        />
+        <input id="new_origin" type="text" class="w-full border border-slate-300 rounded px-3 py-2"
+          placeholder="Ej: Lidl" />
       </div>
 
       <div>
         <label for="new_primary_color" class="block font-medium text-slate-800">Color principal</label>
-        <input
-          id="new_primary_color"
-          type="text"
-          class="w-full border border-slate-300 rounded px-3 py-2"
-          placeholder="Ej: Azul"
-        />
+        <input id="new_primary_color" type="text" class="w-full border border-slate-300 rounded px-3 py-2"
+          placeholder="Ej: Azul" />
       </div>
 
       <div>
         <label for="new_dimensions" class="block font-medium text-slate-800">Dimensiones</label>
-        <input
-          id="new_dimensions"
-          type="text"
-          class="w-full border border-slate-300 rounded px-3 py-2"
-          placeholder="Ej: 10x20x5 cm"
-        />
+        <input id="new_dimensions" type="text" class="w-full border border-slate-300 rounded px-3 py-2"
+          placeholder="Ej: 10x20x5 cm" />
       </div>
 
       <div>
         <label for="new_estimated_value" class="block font-medium text-slate-800">
           Valor estimado (€)
         </label>
-        <input
-          id="new_estimated_value"
-          type="number"
-          step="0.01"
-          min="0"
-          class="w-full border border-slate-300 rounded px-3 py-2"
-          placeholder="Ej: 49.99"
-        />
+        <input id="new_estimated_value" type="number" step="0.01" min="0"
+          class="w-full border border-slate-300 rounded px-3 py-2" placeholder="Ej: 49.99" />
       </div>
 
       <div>
@@ -211,8 +187,7 @@
 
     <div>
       <label for="qty" class="block font-medium text-slate-800">Cantidad</label>
-      <input id="qty" type="number" value="1" min="1"
-             class="w-full border border-slate-300 rounded px-3 py-2" />
+      <input id="qty" type="number" value="1" min="1" class="w-full border border-slate-300 rounded px-3 py-2" />
     </div>
 
     <button class="w-full bg-teal-600 text-white py-2 px-4 rounded hover:bg-teal-700 transition">
@@ -224,12 +199,10 @@
   <h3 class="text-lg font-semibold mt-6 text-slate-900">Resultados:</h3>
 
   <!-- Solo OUT (tarjeta & FIFO) + IN "bonito" -->
-  <section id="out-section"
-           class="mt-2 bg-slate-50 border border-slate-200 p-4 rounded min-h-[64px]"></section>
+  <section id="out-section" class="mt-2 bg-slate-50 border border-slate-200 p-4 rounded min-h-[64px]"></section>
 
   <!-- Solo AUD / AUDTOTAL -->
-  <section id="audit-section"
-           class="mt-4 bg-slate-50 border border-slate-200 p-4 rounded"></section>
+  <section id="audit-section" class="mt-4 bg-slate-50 border border-slate-200 p-4 rounded"></section>
 
   <div id="qr-result" class="mt-4 hidden">
     <h4 class="font-semibold text-slate-900">QR generado:</h4>
@@ -243,104 +216,117 @@
 {% block extra_js %}
 {# Librerías externas necesarias para el escáner y los QR #}
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"
-        onerror="this.onerror=null; this.src='https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js'"></script>
+  onerror="this.onerror=null; this.src='https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js'"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
 
 
 <script>
 
-// =============================
-// ENDPOINTS API OFICIALES
-// =============================
-const API_SCAN = "/api/scan/";
-const API_PRODUCT_SEARCH = "/api/products/search/";
+  const PAGE_SIZE = 25;
+  let AUD_PAGE = 1;
+
+  let LAST_AUD_DATA = null;
+  let LAST_AUDTOTAL_DATA = null;
 
 
-// =============================
-// CONTRATO /api/scan/ (documentado)
-// =============================
-// El backend espera estructuras de este tipo:
-//
-// {
-//   movement_type: "IN" | "OUT" | "AUD" | "AUDTOTAL",
-//   payload: "PRD:<uuid>" | "",
-//   location: "<uuid_location_public_id>" | "",
-//   quantity: number,
-//   mark_open: boolean,
-//   open_days: number | null,
-//   new_product?: {
-//     name: string,
-//     category: string,
-//     unit: string,
-//     min_stock: number,
-//     notes: string,
-//     expiration_date: "YYYY-MM-DD" | null
-//   }
-// }
-//
-// Esto sirve como referencia para mantener el contrato claro
-// y evitar errores al modificar el frontend o backend.
+  // =============================
+  // ENDPOINTS API OFICIALES
+  // =============================
+  const API_SCAN = "/api/scan/";
+  const API_PRODUCT_SEARCH = "/api/products/search/";
+
+  function paginate(items, page) {
+    const start = (page - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    return items.slice(start, end);
+  }
 
 
-// ---- Utilidades CSRF + helpers ----
-function getCookie(name) {
-  const v = `; ${document.cookie}`;
-  const p = v.split(`; ${name}=`);
-  if (p.length === 2) return p.pop().split(';').shift();
-}
-const csrftoken = getCookie('csrftoken');
-
-function validUUID(u) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(u);
-}
-
-// ---- Contenedores separados de render ----
-const $OUT = () => document.getElementById('out-section');
-const $AUD = () => document.getElementById('audit-section');
-
-function clearOUT() { $OUT().innerHTML = ''; }
-function clearAUD() { $AUD().innerHTML = ''; }
-
-
-// =============================
-// 🧱 RENDER (bloque de producto)
-// =============================
-function showVal(v) {
-  return (v !== null && v !== undefined && v !== '') ? v : '–';
-}
+  // =============================
+  // CONTRATO /api/scan/ (documentado)
+  // =============================
+  // El backend espera estructuras de este tipo:
+  //
+  // {
+  //   movement_type: "IN" | "OUT" | "AUD" | "AUDTOTAL",
+  //   payload: "PRD:<uuid>" | "",
+  //   location: "<uuid_location_public_id>" | "",
+  //   quantity: number,
+  //   mark_open: boolean,
+  //   open_days: number | null,
+  //   new_product?: {
+  //     name: string,
+  //     category: string,
+  //     unit: string,
+  //     min_stock: number,
+  //     notes: string,
+  //     expiration_date: "YYYY-MM-DD" | null
+  //   }
+  // }
+  //
+  // Esto sirve como referencia para mantener el contrato claro
+  // y evitar errores al modificar el frontend o backend.
 
 
-function toggleBatches(btn) {
-  const block = btn.closest('.product-block');
-  const batches = block.querySelector('.product-batches');
+  // ---- Utilidades CSRF + helpers ----
+  function getCookie(name) {
+    const v = `; ${document.cookie}`;
+    const p = v.split(`; ${name}=`);
+    if (p.length === 2) return p.pop().split(';').shift();
+  }
+  const csrftoken = getCookie('csrftoken');
 
-  const isHidden = batches.classList.contains('hidden');
-  batches.classList.toggle('hidden');
-  btn.textContent = isHidden ? 'Ocultar lotes ▴' : 'Ver lotes ▾';
-}
+  function validUUID(u) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(u);
+  }
 
-function formatDate(dateStr) {
-  if (!dateStr) return '–';
-  const d = new Date(dateStr);
-  if (isNaN(d)) return dateStr;
-  return d.toLocaleDateString('es-ES');
-}
+  // ---- Contenedores separados de render ----
+  const $OUT = () => document.getElementById('out-section');
+  const $AUD = () => document.getElementById('audit-section');
+
+  function clearOUT() { $OUT().innerHTML = ''; }
+  function clearAUD() { $AUD().innerHTML = ''; }
 
 
-function renderProductBlock(it) {
-  const name = showVal(it.product ?? it.name);
-  const qty = showVal(it.total_quantity);
-  const nearest = showVal(it.nearest_expiration);
+  // =============================
+  // 🧱 RENDER (bloque de producto)
+  // =============================
+  function showVal(v) {
+    return (v !== null && v !== undefined && v !== '') ? v : '–';
+  }
 
-  const category = showVal(it.category);
-  const unit = showVal(it.unit);
 
-  // Lotes
-  const batches = Array.isArray(it.batches) ? it.batches : [];
-  let batchesHtml = '';
+  function toggleBatches(btn) {
+    const block = btn.closest('.product-block');
+    const batches = block.querySelector('.product-batches');
 
-  if (batches.length) {
-  batchesHtml = `
+    const isHidden = batches.classList.contains('hidden');
+    batches.classList.toggle('hidden');
+    btn.textContent = isHidden ? 'Ocultar lotes ▴' : 'Ver lotes ▾';
+  }
+
+  function formatDate(dateStr) {
+    if (!dateStr) return '–';
+    const d = new Date(dateStr);
+    if (isNaN(d)) return dateStr;
+    return d.toLocaleDateString('es-ES');
+  }
+
+
+  function renderProductBlock(it) {
+    const name = showVal(it.product ?? it.name);
+    const qty = showVal(it.total_quantity);
+    const nearest = showVal(it.nearest_expiration);
+
+    const category = showVal(it.category);
+    const unit = showVal(it.unit);
+
+    // Lotes
+    const batches = Array.isArray(it.batches) ? it.batches : [];
+    let batchesHtml = '';
+
+    if (batches.length) {
+      batchesHtml = `
     <div class="mt-2">
       <button
         type="button"
@@ -372,9 +358,8 @@ function renderProductBlock(it) {
               </div>
 
               <div class="mt-2 text-xs">
-                ${
-                  b.opened_units > 0
-                    ? `
+                ${b.opened_units > 0
+          ? `
                       <div class="flex flex-col gap-0.5 text-red-700">
                         <div>
                           🔴 <b>Abierto:</b> ${b.opened_units} unidad${b.opened_units > 1 ? 'es' : ''}
@@ -384,12 +369,12 @@ function renderProductBlock(it) {
                         </div>
                       </div>
                     `
-                    : `
+          : `
                       <div class="text-slate-500">
                         🟢 <b>Cerrado</b>
                       </div>
                     `
-                }
+        }
               </div>
 
             </div>
@@ -398,10 +383,10 @@ function renderProductBlock(it) {
       </div>
     </div>
   `;
-}
+    }
 
 
-  return `
+    return `
     <div class="product-block border border-slate-200 rounded-lg p-3 bg-white">
       <div class="flex items-start justify-between gap-3">
         <div>
@@ -418,156 +403,204 @@ function renderProductBlock(it) {
       ${batchesHtml}
     </div>
   `;
-}
-
-
-
-
-
-// =============================
-// 🔎 AUTOCOMPLETADO DE PRODUCTOS
-// =============================
-(function initProductAutocomplete() {
-  const searchInput   = document.getElementById('productSearch');
-  const datalist      = document.getElementById('productSearchResults');
-  const payloadInput  = document.getElementById('payload');
-  const locationSelect= document.getElementById('loc');
-
-  // Mapa label -> payload
-  const optionMap = new Map();
-  let timer = null;
-  let lastController = null;
-
-  function debounce(fn, ms) {
-    clearTimeout(timer);
-    timer = setTimeout(fn, ms);
   }
 
-  async function fetchResults(q) {
-    try {
-      if (lastController) lastController.abort();
-      lastController = new AbortController();
+  function renderAUDPage() {
+    if (!LAST_AUD_DATA) return;
 
-      const params = new URLSearchParams({ q });
-      const loc = (locationSelect && locationSelect.value) ? locationSelect.value.trim() : '';
-      if (loc) params.set('location', loc);
+    const data = LAST_AUD_DATA;
+    const totalItems = data.items.length;
+    const totalPages = Math.ceil(totalItems / PAGE_SIZE);
 
-      const res = await fetch(`${API_PRODUCT_SEARCH}?${params.toString()}`, { signal: lastController.signal });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return await res.json();
-    } catch (_e) {
-      return { results: [] };
+    if (AUD_PAGE < 1) AUD_PAGE = 1;
+    if (AUD_PAGE > totalPages) AUD_PAGE = totalPages;
+
+    const pageItems = paginate(data.items, AUD_PAGE);
+    const blocks = pageItems.map(it => renderProductBlock(it)).join("");
+
+    const pager = totalPages > 1 ? `
+      <div class="mt-4 flex justify-center items-center gap-4 text-sm">
+        <button
+          ${AUD_PAGE === 1 ? "disabled" : ""}
+          onclick="AUD_PAGE--; renderAUDPage()"
+          class="px-3 py-1 border rounded disabled:opacity-40"
+        >
+          ← Anterior
+        </button>
+
+        <span>Página <b>${AUD_PAGE}</b> de <b>${totalPages}</b></span>
+
+        <button
+          ${AUD_PAGE === totalPages ? "disabled" : ""}
+          onclick="AUD_PAGE++; renderAUDPage()"
+          class="px-3 py-1 border rounded disabled:opacity-40"
+        >
+          Siguiente →
+        </button>
+      </div>
+    ` : "";
+
+    $AUD().innerHTML = `
+      <h3 class="text-lg font-semibold mb-2">Auditoría — ${data.location}</h3>
+      <p class="text-sm text-gray-600 mb-3">
+        Total productos: <b>${totalItems}</b>
+      </p>
+      <div class="space-y-3">
+        ${blocks}
+      </div>
+      ${pager}
+    `;
+  }
+
+
+
+
+
+
+  // =============================
+  // 🔎 AUTOCOMPLETADO DE PRODUCTOS
+  // =============================
+  (function initProductAutocomplete() {
+    const searchInput = document.getElementById('productSearch');
+    const datalist = document.getElementById('productSearchResults');
+    const payloadInput = document.getElementById('payload');
+    const locationSelect = document.getElementById('loc');
+
+    // Mapa label -> payload
+    const optionMap = new Map();
+    let timer = null;
+    let lastController = null;
+
+    function debounce(fn, ms) {
+      clearTimeout(timer);
+      timer = setTimeout(fn, ms);
     }
-  }
 
-  function renderOptions(results) {
-    optionMap.clear();
-    datalist.innerHTML = results.map(r => {
-      const label = [r.name, r.location].filter(Boolean).join(' — ');
-      optionMap.set(label, r.payload);
-      return `<option value="${label}"></option>`;
-    }).join('');
-  }
+    async function fetchResults(q) {
+      try {
+        if (lastController) lastController.abort();
+        lastController = new AbortController();
 
-  if (searchInput) {
-    searchInput.addEventListener('input', () => {
-      const q = searchInput.value.trim();
-      if (!q) { datalist.innerHTML = ''; optionMap.clear(); return; }
-      debounce(async () => {
-        const json = await fetchResults(q);
-        renderOptions(json.results || []);
-      }, 250);
-    });
+        const params = new URLSearchParams({ q });
+        const loc = (locationSelect && locationSelect.value) ? locationSelect.value.trim() : '';
+        if (loc) params.set('location', loc);
 
-    searchInput.addEventListener('change', () => {
-      const val = searchInput.value.trim();
-      if (optionMap.has(val)) {
-        payloadInput.value = optionMap.get(val); // PRD:...
+        const res = await fetch(`${API_PRODUCT_SEARCH}?${params.toString()}`, { signal: lastController.signal });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return await res.json();
+      } catch (_e) {
+        return { results: [] };
       }
-    });
-  }
-})();
-// =============================
-
-// ---- Envío de formulario ----
-
-async function enviar() {
-  const mtype = document.getElementById('mtype').value;
-
-  // Limpiar contenedores según tipo
-  if (mtype === 'OUT' || mtype === 'ADJ') clearOUT();
-  if (mtype === 'AUD' || mtype === 'AUDTOTAL') clearAUD();
-
-  const payloadRaw = (document.getElementById('payload').value || '').trim();
-
-  // Referencias a campos de Entrada (IN)
-  const newNameEl       = document.getElementById('new_name');
-  const newCategoryEl   = document.getElementById('new_category');
-  const newUnitEl       = document.getElementById('new_unit');
-  const newMinStockEl   = document.getElementById('new_min_stock');
-  const newNotesEl      = document.getElementById('new_notes');
-  const newExpDateEl    = document.getElementById('new_expiration_date');
-  const newBrandEl        = document.getElementById('new_brand');
-  const newOriginEl       = document.getElementById('new_origin');
-  const newColorEl        = document.getElementById('new_primary_color');
-  const newDimensionsEl   = document.getElementById('new_dimensions');
-  const newValueEl        = document.getElementById('new_estimated_value');
-
-
-  // Reset visual de errores en campos de IN
-  if (newNameEl) {
-    newNameEl.classList.remove('border-red-500');
-    newNameEl.classList.add('border-gray-300');
-  }
-  if (newUnitEl) {
-    newUnitEl.classList.remove('border-red-500');
-    newUnitEl.classList.add('border-gray-300');
-  }
-
-  // Validación del payload según el tipo de movimiento
-  if (!['IN', 'AUD', 'AUDTOTAL'].includes(mtype)) {
-    // OUT y ADJ: payload PRD obligatorio
-    if (!payloadRaw.startsWith('PRD:')) { 
-      alert('El payload debe empezar por PRD:'); 
-      return; 
     }
-    const uuid = payloadRaw.slice(4).trim();
-    if (!validUUID(uuid)) { 
-      alert('UUID no válido.'); 
-      return; 
+
+    function renderOptions(results) {
+      optionMap.clear();
+      datalist.innerHTML = results.map(r => {
+        const label = [r.name, r.location].filter(Boolean).join(' — ');
+        optionMap.set(label, r.payload);
+        return `<option value="${label}"></option>`;
+      }).join('');
     }
-  }
 
-  // Validación específica para IN:
-  // Caso 1: IN con PRD:uuid válido -> se asume producto existente (nombre/unidad opcionales)
-  // Caso 2: IN sin PRD (o PRD mal formado) -> alta de producto nuevo -> nombre + unidad OBLIGATORIOS
-  if (mtype === 'IN') {
-    const maybeUuid = payloadRaw.startsWith('PRD:') ? payloadRaw.slice(4).trim() : '';
-    const hasValidPRD = maybeUuid && validUUID(maybeUuid);
+    if (searchInput) {
+      searchInput.addEventListener('input', () => {
+        const q = searchInput.value.trim();
+        if (!q) { datalist.innerHTML = ''; optionMap.clear(); return; }
+        debounce(async () => {
+          const json = await fetchResults(q);
+          renderOptions(json.results || []);
+        }, 250);
+      });
 
-    if (!hasValidPRD) {
-      const newName = (newNameEl?.value || '').trim();
-      const newUnit = (newUnitEl?.value || '').trim();
-      let missing = [];
-
-      if (!newName) {
-        missing.push('nombre');
-        if (newNameEl) {
-          newNameEl.classList.remove('border-gray-300');
-          newNameEl.classList.add('border-red-500');
+      searchInput.addEventListener('change', () => {
+        const val = searchInput.value.trim();
+        if (optionMap.has(val)) {
+          payloadInput.value = optionMap.get(val); // PRD:...
         }
-      }
-      if (!newUnit) {
-        missing.push('unidad');
-        if (newUnitEl) {
-          newUnitEl.classList.remove('border-gray-300');
-          newUnitEl.classList.add('border-red-500');
-        }
-      }
+      });
+    }
+  })();
+  // =============================
 
-      if (missing.length) {
-        // Mensaje de error en la zona de resultados (OUT)
-        $OUT().innerHTML = `
+  // ---- Envío de formulario ----
+
+  async function enviar() {
+    const mtype = document.getElementById('mtype').value;
+
+    // Limpiar contenedores según tipo
+    if (mtype === 'OUT' || mtype === 'ADJ') clearOUT();
+    if (mtype === 'AUD' || mtype === 'AUDTOTAL') clearAUD();
+
+    const payloadRaw = (document.getElementById('payload').value || '').trim();
+
+    // Referencias a campos de Entrada (IN)
+    const newNameEl = document.getElementById('new_name');
+    const newCategoryEl = document.getElementById('new_category');
+    const newUnitEl = document.getElementById('new_unit');
+    const newMinStockEl = document.getElementById('new_min_stock');
+    const newNotesEl = document.getElementById('new_notes');
+    const newExpDateEl = document.getElementById('new_expiration_date');
+    const newBrandEl = document.getElementById('new_brand');
+    const newOriginEl = document.getElementById('new_origin');
+    const newColorEl = document.getElementById('new_primary_color');
+    const newDimensionsEl = document.getElementById('new_dimensions');
+    const newValueEl = document.getElementById('new_estimated_value');
+
+
+    // Reset visual de errores en campos de IN
+    if (newNameEl) {
+      newNameEl.classList.remove('border-red-500');
+      newNameEl.classList.add('border-gray-300');
+    }
+    if (newUnitEl) {
+      newUnitEl.classList.remove('border-red-500');
+      newUnitEl.classList.add('border-gray-300');
+    }
+
+    // Validación del payload según el tipo de movimiento
+    if (!['IN', 'AUD', 'AUDTOTAL'].includes(mtype)) {
+      // OUT y ADJ: payload PRD obligatorio
+      if (!payloadRaw.startsWith('PRD:')) {
+        alert('El payload debe empezar por PRD:');
+        return;
+      }
+      const uuid = payloadRaw.slice(4).trim();
+      if (!validUUID(uuid)) {
+        alert('UUID no válido.');
+        return;
+      }
+    }
+
+    // Validación específica para IN:
+    // Caso 1: IN con PRD:uuid válido -> se asume producto existente (nombre/unidad opcionales)
+    // Caso 2: IN sin PRD (o PRD mal formado) -> alta de producto nuevo -> nombre + unidad OBLIGATORIOS
+    if (mtype === 'IN') {
+      const maybeUuid = payloadRaw.startsWith('PRD:') ? payloadRaw.slice(4).trim() : '';
+      const hasValidPRD = maybeUuid && validUUID(maybeUuid);
+
+      if (!hasValidPRD) {
+        const newName = (newNameEl?.value || '').trim();
+        const newUnit = (newUnitEl?.value || '').trim();
+        let missing = [];
+
+        if (!newName) {
+          missing.push('nombre');
+          if (newNameEl) {
+            newNameEl.classList.remove('border-gray-300');
+            newNameEl.classList.add('border-red-500');
+          }
+        }
+        if (!newUnit) {
+          missing.push('unidad');
+          if (newUnitEl) {
+            newUnitEl.classList.remove('border-gray-300');
+            newUnitEl.classList.add('border-red-500');
+          }
+        }
+
+        if (missing.length) {
+          // Mensaje de error en la zona de resultados (OUT)
+          $OUT().innerHTML = `
           <div class="p-4 bg-red-50 border border-red-200 rounded">
             <div class="font-semibold text-red-700">Faltan campos obligatorios</div>
             <div class="text-sm text-red-700 mt-1">
@@ -576,111 +609,111 @@ async function enviar() {
             </div>
           </div>
         `;
-        return;
+          return;
+        }
       }
     }
-  }
 
-  const body = {
+    const body = {
       payload: payloadRaw,
       quantity: document.getElementById('qty').value || 1,
       location: document.getElementById('loc').value || '',
       movement_type: mtype,
       mark_open: document.getElementById("mark_open")?.checked || false,
       open_days: document.getElementById("open_days")?.value || null,
-  };
-
-  // --- Auditoría: enviar filtros avanzados ---
-if (mtype === 'AUD') {
-  body.audit_filters = {
-    name: (document.getElementById('aud_name')?.value || '').trim(),
-    category: (document.getElementById('aud_category')?.value || '').trim(),
-    brand: (document.getElementById('aud_brand')?.value || '').trim(),
-    origin: (document.getElementById('aud_origin')?.value || '').trim(),
-    primary_color: (document.getElementById('aud_primary_color')?.value || '').trim(),
-    dimensions: (document.getElementById('aud_dimensions')?.value || '').trim(),
-  };
-}
-
-
-  if (mtype === 'IN') {
-    body.new_product = {
-      name: newNameEl?.value || '',
-      category: newCategoryEl?.value || '',
-      unit: newUnitEl?.value || '',
-      min_stock: parseInt(newMinStockEl?.value || '0'),
-      notes: newNotesEl?.value || '',
-      expiration_date: newExpDateEl?.value || null,
-
-      // --- metadatos opcionales (v0.1) ---
-      brand: newBrandEl?.value || '',
-      origin: newOriginEl?.value || '',
-      primary_color: newColorEl?.value || '',
-      dimensions: newDimensionsEl?.value || '',
-      estimated_value: newValueEl?.value
-        ? parseFloat(newValueEl.value)
-        : null,
     };
-  }
 
-  try {
-    const res = await fetch(API_SCAN, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-      credentials: 'same-origin',
-      body: JSON.stringify(body),
-    });
-
-    const raw = await res.text();
-    let data;
-    try { data = JSON.parse(raw); } catch { data = { non_json: true, raw }; }
-
-    const headersObj = {};
-    res.headers.forEach((v, k) => headersObj[k] = v);
-
-    // --- AUDITORÍA: si no hay resultados, mostrar mensaje y salir ---
+    // --- Auditoría: enviar filtros avanzados ---
     if (mtype === 'AUD') {
-      const items = data?.items || data?.data?.items || data?.data?.data?.items || [];
-      const total = data?.total_products ?? data?.data?.total_products ?? data?.data?.data?.total_products ?? items.length;
+      body.audit_filters = {
+        name: (document.getElementById('aud_name')?.value || '').trim(),
+        category: (document.getElementById('aud_category')?.value || '').trim(),
+        brand: (document.getElementById('aud_brand')?.value || '').trim(),
+        origin: (document.getElementById('aud_origin')?.value || '').trim(),
+        primary_color: (document.getElementById('aud_primary_color')?.value || '').trim(),
+        dimensions: (document.getElementById('aud_dimensions')?.value || '').trim(),
+      };
+    }
 
-      if (Array.isArray(items) && items.length === 0) {
-        $AUD().innerHTML = `
+
+    if (mtype === 'IN') {
+      body.new_product = {
+        name: newNameEl?.value || '',
+        category: newCategoryEl?.value || '',
+        unit: newUnitEl?.value || '',
+        min_stock: parseInt(newMinStockEl?.value || '0'),
+        notes: newNotesEl?.value || '',
+        expiration_date: newExpDateEl?.value || null,
+
+        // --- metadatos opcionales (v0.1) ---
+        brand: newBrandEl?.value || '',
+        origin: newOriginEl?.value || '',
+        primary_color: newColorEl?.value || '',
+        dimensions: newDimensionsEl?.value || '',
+        estimated_value: newValueEl?.value
+          ? parseFloat(newValueEl.value)
+          : null,
+      };
+    }
+
+    try {
+      const res = await fetch(API_SCAN, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+        credentials: 'same-origin',
+        body: JSON.stringify(body),
+      });
+
+      const raw = await res.text();
+      let data;
+      try { data = JSON.parse(raw); } catch { data = { non_json: true, raw }; }
+
+      const headersObj = {};
+      res.headers.forEach((v, k) => headersObj[k] = v);
+
+      // --- AUDITORÍA: si no hay resultados, mostrar mensaje y salir ---
+      if (mtype === 'AUD') {
+        const items = data?.items || data?.data?.items || data?.data?.data?.items || [];
+        const total = data?.total_products ?? data?.data?.total_products ?? data?.data?.data?.total_products ?? items.length;
+
+        if (Array.isArray(items) && items.length === 0) {
+          $AUD().innerHTML = `
           <div class="p-4 bg-yellow-50 border border-yellow-300 rounded text-slate-800">
             No se encontró ningún producto con los criterios indicados.
           </div>
         `;
-        return;
+          return;
+        }
       }
-    }
 
 
-    // AUDITORÍA TOTAL — versión simplificada y fiable (render SOLO en #audit-section)
-if (mtype === 'AUDTOTAL') {
-  const inv = data?.data?.inventory || data?.inventory || data?.data?.data?.inventory;
-  const total = data?.data?.total_locations || data?.total_locations || data?.data?.data?.total_locations;
+      // AUDITORÍA TOTAL — versión simplificada y fiable (render SOLO en #audit-section)
+      if (mtype === 'AUDTOTAL') {
+        const inv = data?.data?.inventory || data?.inventory || data?.data?.data?.inventory;
+        const total = data?.data?.total_locations || data?.total_locations || data?.data?.data?.total_locations;
 
-  if (!inv || !Array.isArray(inv)) {
-    $AUD().innerHTML = `
+        if (!inv || !Array.isArray(inv)) {
+          $AUD().innerHTML = `
       <div class="p-4 bg-red-100 text-red-700 rounded">
         <strong>Error:</strong> No se pudo leer el inventario desde la respuesta del servidor.
       </div>
       <pre class="mt-2 text-xs text-gray-600 overflow-x-auto">${JSON.stringify(data, null, 2)}</pre>
     `;
-    return;
-  }
+          return;
+        }
 
-  let html = `
+        let html = `
     <h2 class="text-2xl font-bold text-blue-600 mb-3">📦 Auditoría total</h2>
     <p class="text-sm text-gray-700 mb-6">
       Total de ubicaciones: <b>${total || inv.length}</b>
     </p>
   `;
 
-  inv.forEach(loc => {
-    const blocks = (loc.items || []).map(it => renderProductBlock(it)).join("");
+        inv.forEach(loc => {
+          const blocks = (loc.items || []).map(it => renderProductBlock(it)).join("");
 
-    html += `
-      <div class="border border-gray-300 rounded-lg p-4 mb-5 bg-gray-50">
+          html += `
+      <div class="audit-loc-block border border-gray-300 rounded-lg p-4 mb-5 bg-gray-50">
         <h3 class="text-lg font-semibold text-gray-800 mb-2">${loc.location}</h3>
         <p class="text-sm text-gray-600 mb-3">
           Productos en esta ubicación: <b>${loc.total_products}</b>
@@ -690,34 +723,35 @@ if (mtype === 'AUDTOTAL') {
         </div>
       </div>
     `;
-  });
+        });
 
-  $AUD().innerHTML = html;
-  return;
-}
-
-
-    // ENTRADA (IN) — QR + tarjeta bonita en OUT y salir
-    if (mtype === 'IN') {
-      // inner = datos reales de la API (por si vienen anidados en data.data)
-      const inner = (data && (data.payload !== undefined || data.detail !== undefined))
-                    ? data
-                    : (data && data.data) || data || {};
-
-      const qrValue = inner.payload || payloadRaw || '';
-      if (qrValue) {
-        const qrCanvas = document.getElementById('qr-canvas');
-        const qrContainer = document.getElementById('qr-result');
-        qrContainer.classList.remove('hidden');
-        new QRious({ element: qrCanvas, value: qrValue, size: 200, level: 'H' });
+        $AUD().innerHTML = html;
+        applyVisualPagination("#audit-section");
+        return;
       }
 
-      const detailText = inner.detail || 'Entrada registrada correctamente';
-      const shownPayload = inner.payload || payloadRaw || '(no disponible)';
-      const locText = body.location || '-';
-      const qtyText = body.quantity || 1;
 
-      $OUT().innerHTML = `
+      // ENTRADA (IN) — QR + tarjeta bonita en OUT y salir
+      if (mtype === 'IN') {
+        // inner = datos reales de la API (por si vienen anidados en data.data)
+        const inner = (data && (data.payload !== undefined || data.detail !== undefined))
+          ? data
+          : (data && data.data) || data || {};
+
+        const qrValue = inner.payload || payloadRaw || '';
+        if (qrValue) {
+          const qrCanvas = document.getElementById('qr-canvas');
+          const qrContainer = document.getElementById('qr-result');
+          qrContainer.classList.remove('hidden');
+          new QRious({ element: qrCanvas, value: qrValue, size: 200, level: 'H' });
+        }
+
+        const detailText = inner.detail || 'Entrada registrada correctamente';
+        const shownPayload = inner.payload || payloadRaw || '(no disponible)';
+        const locText = body.location || '-';
+        const qtyText = body.quantity || 1;
+
+        $OUT().innerHTML = `
         <div class="p-4 bg-blue-50 border border-blue-200 rounded mb-2">
           <div class="font-semibold text-blue-800">
             ✅ ${detailText}
@@ -731,31 +765,30 @@ if (mtype === 'AUDTOTAL') {
           </div>
         </div>
       `;
-      return;
-    }
+        return;
+      }
 
-    // SALIDA (OUT) — mostrar detalle de lotes consumidos si la petición fue OK (render SOLO en #out-section)
-    if (mtype === 'OUT') {
-      // 2.1 — Acción OPENED (marcar como abierto)
-      if (data && data.action === "OPENED") {
-        $OUT().innerHTML = `
+      // SALIDA (OUT) — mostrar detalle de lotes consumidos si la petición fue OK (render SOLO en #out-section)
+      if (mtype === 'OUT') {
+        // 2.1 — Acción OPENED (marcar como abierto)
+        if (data && data.action === "OPENED") {
+          $OUT().innerHTML = `
           <div class="p-4 bg-yellow-50 border border-yellow-200 rounded mb-4">
             <div class="font-semibold text-yellow-800">
               ✅ ${data.detail}
             </div>
             <div class="mt-2 text-sm text-yellow-900 space-y-1">
               <p><b>Lote abierto:</b> #${data.batch_id}</p>
-              <p><b>Caduca tras abrir:</b> ${
-                data.open_expires_at ? data.open_expires_at : "—"
-              }</p>
+              <p><b>Caduca tras abrir:</b> ${data.open_expires_at ? data.open_expires_at : "—"
+            }</p>
             </div>
           </div>
         `;
-        return;
-      }
+          return;
+        }
 
-      if (data && data.ok) {
-        const rows = (data.consumed_batches || []).map(cb => `
+        if (data && data.ok) {
+          const rows = (data.consumed_batches || []).map(cb => `
           <tr class="hover:bg-gray-50">
             <td class="border px-3 py-2 text-center">${cb.batch_id}</td>
             <td class="border px-3 py-2 text-center">${cb.prev_qty}</td>
@@ -765,26 +798,26 @@ if (mtype === 'AUDTOTAL') {
           </tr>
         `).join("");
 
-        // Info extra de caducidades globales
-        const nearest = data.nearest_expiration;
-        const farthest = data.farthest_expiration;
+          // Info extra de caducidades globales
+          const nearest = data.nearest_expiration;
+          const farthest = data.farthest_expiration;
 
-        let expInfo = "";
-        if (nearest && farthest) {
-          if (nearest === farthest) {
-            expInfo = `
+          let expInfo = "";
+          if (nearest && farthest) {
+            if (nearest === farthest) {
+              expInfo = `
               <div class="text-xs text-gray-600">
                 Caducidad de los lotes restantes: <b>${nearest}</b>
               </div>`;
-          } else {
-            expInfo = `
+            } else {
+              expInfo = `
               <div class="text-xs text-gray-600">
                 Lote más próximo: <b>${nearest}</b> · Último lote: <b>${farthest}</b>
               </div>`;
+            }
           }
-        }
 
-        const html = `
+          const html = `
           <div class="p-4 bg-green-50 border border-green-200 rounded mb-4">
             <div class="font-semibold text-green-700">
               ✅ ${data.detail || 'Salida registrada correctamente'}
@@ -820,11 +853,11 @@ if (mtype === 'AUDTOTAL') {
           </table>
         `;
 
-        $OUT().innerHTML = html;
-        return;
-      } else {
-        const msg = data?.detail || 'No se pudo registrar la salida.';
-        $OUT().innerHTML = `
+          $OUT().innerHTML = html;
+          return;
+        } else {
+          const msg = data?.detail || 'No se pudo registrar la salida.';
+          $OUT().innerHTML = `
           <div class="p-4 bg-red-50 border border-red-200 rounded">
             <div class="font-semibold text-red-700">❌ ${msg}</div>
             ${data?.available !== undefined ? `
@@ -832,173 +865,280 @@ if (mtype === 'AUDTOTAL') {
                 Disponible: <b>${data.available}</b> — Solicitado: <b>${data.requested}</b>
               </div>` : ''}
           </div>`;
-        return;
+          return;
+        }
       }
-    }
 
-    // AUD — render SOLO en #audit-section
-    if (mtype === "AUD" && data && data.items) {
-      const blocks = (data.items || []).map(it => renderProductBlock(it)).join("");
+      // AUD — render SOLO en #audit-section
+      if (mtype === "AUD" && data && data.items) {
 
-      const html = `
-        <h3 class="text-lg font-semibold mb-2">Auditoría — ${data.location}</h3>
-        <p class="text-sm text-gray-600 mb-3">
-          Total productos: <b>${data.total_products}</b>
-        </p>
-        <div class="space-y-3">
-          ${blocks}
-        </div>
-      `;
+        LAST_AUD_DATA = data;   // ⬅️ guardar resultados
+        const totalItems = data.items.length;
+        const totalPages = Math.ceil(totalItems / PAGE_SIZE);
 
-      $AUD().innerHTML = html;
-    }
-    else {
-      // Fallback: JSON crudo al contenedor correspondiente
+        if (AUD_PAGE < 1) AUD_PAGE = 1;
+        if (AUD_PAGE > totalPages) AUD_PAGE = totalPages;
+
+        const pageItems = paginate(data.items, AUD_PAGE);
+        const blocks = pageItems.map(it => renderProductBlock(it)).join("");
+
+        const pager = totalPages > 1 ? `
+          <div class="mt-4 flex justify-center items-center gap-4 text-sm">
+            <button
+              ${AUD_PAGE === 1 ? "disabled" : ""}
+              onclick="AUD_PAGE--; renderAUDPage()"
+              class="px-3 py-1 border rounded disabled:opacity-40"
+            >
+              ← Anterior
+            </button>
+
+            <span>Página <b>${AUD_PAGE}</b> de <b>${totalPages}</b></span>
+
+            <button
+              ${AUD_PAGE === totalPages ? "disabled" : ""}
+              onclick="AUD_PAGE++; renderAUDPage()"
+              class="px-3 py-1 border rounded disabled:opacity-40"
+            >
+              Siguiente →
+            </button>
+          </div>
+        ` : "";
+
+        $AUD().innerHTML = `
+          <h3 class="text-lg font-semibold mb-2">Auditoría — ${data.location}</h3>
+          <p class="text-sm text-gray-600 mb-3">
+            Total productos: <b>${totalItems}</b>
+          </p>
+          <div class="space-y-3">
+            ${blocks}
+          </div>
+          ${pager}
+        `;
+      }
+
+      else {
+        // Fallback: JSON crudo al contenedor correspondiente
+        const target = (mtype === 'AUD' || mtype === 'AUDTOTAL') ? $AUD() : $OUT();
+        target.innerHTML = `
+          <pre class="bg-gray-100 border border-gray-300 p-3 rounded text-gray-700 text-xs overflow-x-auto">${JSON.stringify({ ok: res.ok, status: res.status, headers: headersObj, data }, null, 2)
+          }</pre>`;
+      }
+
+
+    } catch (e) {
+      // Error de red o excepción inesperada durante el envío/procesado
       const target = (mtype === 'AUD' || mtype === 'AUDTOTAL') ? $AUD() : $OUT();
       target.innerHTML = `
-        <pre class="bg-gray-100 border border-gray-300 p-3 rounded text-gray-700 text-xs overflow-x-auto">${
-          JSON.stringify({ ok: res.ok, status: res.status, headers: headersObj, data }, null, 2)
-        }</pre>`;
-    }
-
-  } catch (e) {
-    // Error de red o excepción inesperada durante el envío/procesado
-    const target = (mtype === 'AUD' || mtype === 'AUDTOTAL') ? $AUD() : $OUT();
-    target.innerHTML = `
       <div class="p-4 bg-red-50 border border-red-200 rounded">
         <div class="font-semibold text-red-700">Error de red</div>
         <pre class="mt-2 text-xs text-gray-600 overflow-x-auto">${String(e)}</pre>
       </div>`;
-  }
+    }
 
-} // fin function enviar
+    function applyVisualPagination(containerSelector) {
+      const items = Array.from(
+        document.querySelectorAll(containerSelector + " .product-block")
+      );
 
-// ---- Lector QR / Cámara ----
-let html5Qr; let cameras = []; let currentCamIndex = 0; let lastText = null;
+      const PAGE_SIZE = 25;
+      let page = 1;
+      const totalPages = Math.ceil(items.length / PAGE_SIZE);
 
-function disableCameraUI(message) {
-  const statusEl = document.getElementById('cam-status');
-  const btn = document.getElementById('switchBtn');
-  if (statusEl) {
-    statusEl.textContent = message || 'La cámara no está disponible. Usa el formulario manual para registrar movimientos.';
-  }
-  if (btn) {
-    btn.disabled = true;
-  }
-  const reader = document.getElementById('reader');
-  if (reader) {
-    reader.classList.add('bg-gray-100');
-  }
-}
+      if (totalPages <= 1) return;
 
-function onScanSuccess(decodedText) {
-  if (decodedText === lastText) return;
-  lastText = decodedText;
-  document.getElementById('payload').value = decodedText;
+      const pager = document.createElement("div");
+      pager.className = "mt-4 flex justify-center items-center gap-4 text-sm";
 
-  const parts = decodedText.split('|').map(s => s.trim());
-  parts.forEach(p => {
-    const [key, value] = p.split(':');
-    if (!key || !value) return;
-    const k = key.toUpperCase();
-    if (k === 'LOC') document.getElementById('loc').value = value;
-    if (k === 'Q') document.getElementById('qty').value = value;
-    if (k === 'T') document.getElementById('mtype').value = value.toUpperCase();
-  });
-}
+      function renderPage() {
+        items.forEach((el, idx) => {
+          el.style.display =
+            idx >= (page - 1) * PAGE_SIZE && idx < page * PAGE_SIZE
+              ? ""
+              : "none";
+        });
 
-function onScanError(_msg) {
-  // Podríamos loguear si queremos, pero no es crítico para el usuario.
-}
+        // Ocultar bloques de ubicación que se queden sin productos visibles en esta página
+        const locBlocks = Array.from(document.querySelectorAll(containerSelector + " .audit-loc-block"));
+        locBlocks.forEach(lb => {
+          const visibleInside = Array.from(lb.querySelectorAll(".product-block"))
+            .some(pb => pb.style.display !== "none");
+          lb.style.display = visibleInside ? "" : "none";
+        });
 
-async function startWithFacingMode() {
-  await html5Qr.start(
-    { facingMode: "environment" },
-    { fps: 12, qrbox: 280, rememberLastUsedCamera: true },
-    onScanSuccess,
-    onScanError
-  );
-}
+        pager.innerHTML = `
+          <button class="prev px-3 py-1 border rounded disabled:opacity-40"
+            ${page === 1 ? "disabled" : ""}>
+            ← Anterior
+          </button>
 
-async function listAndStartPreferred() {
-  cameras = await Html5Qrcode.getCameras();
-  if (!cameras || !cameras.length) {
-    throw new Error("SIN_CAMARAS");
-  }
-  const prefer = cameras.find(c => (c.label || "").toLowerCase().match(/back|rear|environment/));
-  currentCamIndex = Math.max(0, prefer ? cameras.indexOf(prefer) : 0);
-  await html5Qr.start(
-    cameras[currentCamIndex].id,
-    { fps: 12, qrbox: 280 },
-    onScanSuccess,
-    onScanError
-  );
-}
+          <span>Página ${page} / ${totalPages}</span>
 
-async function startScanner() {
-  const statusEl = document.getElementById('cam-status');
-  try {
-    html5Qr = new Html5Qrcode("reader");
-    try {
-      await startWithFacingMode();
-      statusEl.textContent = "Cámara trasera activa. Enfoca un QR…";
-    } catch (_e) {
-      try {
-        await listAndStartPreferred();
-        const label = cameras[currentCamIndex]?.label || "cámara";
-        statusEl.textContent = `Cámara activa (${label}). Enfoca un QR…`;
-      } catch (innerErr) {
-        if (innerErr && innerErr.message === "SIN_CAMARAS") {
-          disableCameraUI("No se han encontrado cámaras en este dispositivo. Usa el formulario manual.");
-        } else {
-          console.error(innerErr);
-          disableCameraUI("No se pudo iniciar la cámara. Puedes usar el formulario manual sin problema.");
+          <button class="next px-3 py-1 border rounded disabled:opacity-40"
+            ${page === totalPages ? "disabled" : ""}>
+            Siguiente →
+          </button>
+        `;
+
+        const prevBtn = pager.querySelector(".prev");
+        const nextBtn = pager.querySelector(".next");
+
+        if (prevBtn) {
+          prevBtn.onclick = () => {
+            if (page > 1) {
+              page--;
+              renderPage();
+            }
+          };
         }
-      }
-    }
-  } catch (e) {
-    console.error(e);
-    // Casos típicos: permisos denegados, navegador bloquea cámara, etc.
-    disableCameraUI("No fue posible acceder a la cámara (permisos denegados o dispositivo no soportado). Usa el formulario manual.");
-  }
-}
 
-async function switchCamera() {
-  const statusEl = document.getElementById('cam-status');
-  try {
-    if (!html5Qr || !cameras.length) {
-      statusEl.textContent = "No hay más cámaras disponibles.";
-      return;
+        if (nextBtn) {
+          nextBtn.onclick = () => {
+            if (page < totalPages) {
+              page++;
+              renderPage();
+            }
+          };
+        }
+
+      }
+
+      const container = document.querySelector(containerSelector);
+      if (container) {
+        container.appendChild(pager);   // ✅ paginador al final del #audit-section
+      } else {
+        items[0].parentElement.after(pager); // fallback
+      }
+      renderPage();
     }
-    await html5Qr.stop(); 
-    await html5Qr.clear();
-    currentCamIndex = (currentCamIndex + 1) % cameras.length;
+
+  } // fin function enviar
+
+  // ---- Lector QR / Cámara ----
+  let html5Qr; let cameras = []; let currentCamIndex = 0; let lastText = null;
+
+  function disableCameraUI(message) {
+    const statusEl = document.getElementById('cam-status');
+    const btn = document.getElementById('switchBtn');
+    if (statusEl) {
+      statusEl.textContent = message || 'La cámara no está disponible. Usa el formulario manual para registrar movimientos.';
+    }
+    if (btn) {
+      btn.disabled = true;
+    }
+    const reader = document.getElementById('reader');
+    if (reader) {
+      reader.classList.add('bg-gray-100');
+    }
+  }
+
+  function onScanSuccess(decodedText) {
+    if (decodedText === lastText) return;
+    lastText = decodedText;
+    document.getElementById('payload').value = decodedText;
+
+    const parts = decodedText.split('|').map(s => s.trim());
+    parts.forEach(p => {
+      const [key, value] = p.split(':');
+      if (!key || !value) return;
+      const k = key.toUpperCase();
+      if (k === 'LOC') document.getElementById('loc').value = value;
+      if (k === 'Q') document.getElementById('qty').value = value;
+      if (k === 'T') document.getElementById('mtype').value = value.toUpperCase();
+    });
+  }
+
+  function onScanError(_msg) {
+    // Podríamos loguear si queremos, pero no es crítico para el usuario.
+  }
+
+  async function startWithFacingMode() {
+    await html5Qr.start(
+      { facingMode: "environment" },
+      { fps: 12, qrbox: 280, rememberLastUsedCamera: true },
+      onScanSuccess,
+      onScanError
+    );
+  }
+
+  async function listAndStartPreferred() {
+    cameras = await Html5Qrcode.getCameras();
+    if (!cameras || !cameras.length) {
+      throw new Error("SIN_CAMARAS");
+    }
+    const prefer = cameras.find(c => (c.label || "").toLowerCase().match(/back|rear|environment/));
+    currentCamIndex = Math.max(0, prefer ? cameras.indexOf(prefer) : 0);
     await html5Qr.start(
       cameras[currentCamIndex].id,
       { fps: 12, qrbox: 280 },
       onScanSuccess,
       onScanError
     );
-    const label = cameras[currentCamIndex]?.label || "cámara";
-    statusEl.textContent = `Cámara activa (${label}). Enfoca un QR…`;
-  } catch (e) {
-    console.error(e);
-    statusEl.textContent = "No se pudo cambiar de cámara. Puedes seguir usando el formulario manual.";
   }
-}
 
-// ---- Inicialización ----
-document.addEventListener('DOMContentLoaded', () => {
-  console.log("DOM cargado, inicializando escáner...");
+  async function startScanner() {
+    const statusEl = document.getElementById('cam-status');
+    try {
+      html5Qr = new Html5Qrcode("reader");
+      try {
+        await startWithFacingMode();
+        statusEl.textContent = "Cámara trasera activa. Enfoca un QR…";
+      } catch (_e) {
+        try {
+          await listAndStartPreferred();
+          const label = cameras[currentCamIndex]?.label || "cámara";
+          statusEl.textContent = `Cámara activa (${label}). Enfoca un QR…`;
+        } catch (innerErr) {
+          if (innerErr && innerErr.message === "SIN_CAMARAS") {
+            disableCameraUI("No se han encontrado cámaras en este dispositivo. Usa el formulario manual.");
+          } else {
+            console.error(innerErr);
+            disableCameraUI("No se pudo iniciar la cámara. Puedes usar el formulario manual sin problema.");
+          }
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      // Casos típicos: permisos denegados, navegador bloquea cámara, etc.
+      disableCameraUI("No fue posible acceder a la cámara (permisos denegados o dispositivo no soportado). Usa el formulario manual.");
+    }
+  }
 
-  // Mostrar/ocultar campos de Entrada / opciones de abierto
-  const tipoSelect = document.getElementById('mtype');
-  const extraForm = document.getElementById('entrada-extra');
-  const openOptions = document.getElementById('open-options');
-  const audFilters = document.getElementById('aud-filters');
+  async function switchCamera() {
+    const statusEl = document.getElementById('cam-status');
+    try {
+      if (!html5Qr || !cameras.length) {
+        statusEl.textContent = "No hay más cámaras disponibles.";
+        return;
+      }
+      await html5Qr.stop();
+      await html5Qr.clear();
+      currentCamIndex = (currentCamIndex + 1) % cameras.length;
+      await html5Qr.start(
+        cameras[currentCamIndex].id,
+        { fps: 12, qrbox: 280 },
+        onScanSuccess,
+        onScanError
+      );
+      const label = cameras[currentCamIndex]?.label || "cámara";
+      statusEl.textContent = `Cámara activa (${label}). Enfoca un QR…`;
+    } catch (e) {
+      console.error(e);
+      statusEl.textContent = "No se pudo cambiar de cámara. Puedes seguir usando el formulario manual.";
+    }
+  }
+
+  // ---- Inicialización ----
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log("DOM cargado, inicializando escáner...");
+
+    // Mostrar/ocultar campos de Entrada / opciones de abierto
+    const tipoSelect = document.getElementById('mtype');
+    const extraForm = document.getElementById('entrada-extra');
+    const openOptions = document.getElementById('open-options');
+    const audFilters = document.getElementById('aud-filters');
 
 
-  function updateVisibility() {
+    function updateVisibility() {
       const t = tipoSelect.value;
 
       // Mostrar solo si tipo = IN
@@ -1012,34 +1152,34 @@ document.addEventListener('DOMContentLoaded', () => {
       if (t === 'AUD') audFilters.classList.remove('hidden');
       else audFilters.classList.add('hidden');
 
-  }
-
-  tipoSelect.addEventListener('change', updateVisibility);
-  updateVisibility();
-
-  // Inicializar cámara con comprobación de soporte y librería
-  setTimeout(() => {
-    const statusEl = document.getElementById('cam-status');
-
-    if (typeof Html5Qrcode === 'undefined') {
-      console.error('Html5Qrcode no está disponible. Verifica la carga de la librería.');
-      disableCameraUI('La librería de cámara no se ha podido cargar. Usa el formulario manual.');
-      return;
     }
 
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      console.warn('Este navegador/dispositivo no soporta getUserMedia.');
-      disableCameraUI('Este navegador no permite usar cámara. Usa el formulario manual para registrar los movimientos.');
-      return;
-    }
+    tipoSelect.addEventListener('change', updateVisibility);
+    updateVisibility();
 
-    const switchBtn = document.getElementById('switchBtn');
-    if (switchBtn) {
-      switchBtn.addEventListener('click', switchCamera);
-    }
-    startScanner();
-  }, 100);
-});
+    // Inicializar cámara con comprobación de soporte y librería
+    setTimeout(() => {
+      const statusEl = document.getElementById('cam-status');
+
+      if (typeof Html5Qrcode === 'undefined') {
+        console.error('Html5Qrcode no está disponible. Verifica la carga de la librería.');
+        disableCameraUI('La librería de cámara no se ha podido cargar. Usa el formulario manual.');
+        return;
+      }
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        console.warn('Este navegador/dispositivo no soporta getUserMedia.');
+        disableCameraUI('Este navegador no permite usar cámara. Usa el formulario manual para registrar los movimientos.');
+        return;
+      }
+
+      const switchBtn = document.getElementById('switchBtn');
+      if (switchBtn) {
+        switchBtn.addEventListener('click', switchCamera);
+      }
+      startScanner();
+    }, 100);
+  });
 
 
 </script>

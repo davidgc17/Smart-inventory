@@ -3,99 +3,105 @@
 {% block title %}Gestión de ubicaciones · Smart Inventory{% endblock %}
 
 {% block content %}
-<div
-  class="max-w-4xl mx-auto bg-sky-50 shadow-md rounded-xl p-6 space-y-6
-         motion-safe:transition-opacity motion-safe:duration-150"
->
+<div class="max-w-4xl mx-auto bg-sky-50 shadow-md rounded-xl p-6 space-y-6
+         motion-safe:transition-opacity motion-safe:duration-150">
 
-    <h1 class="text-3xl font-bold text-teal-700">Gestión de ubicaciones</h1>
+  <h1 class="text-3xl font-bold text-teal-700">Gestión de ubicaciones</h1>
 
-    <!-- Mensajes -->
-    <div id="msg" class="hidden p-3 rounded text-sm"></div>
+  <!-- Mensajes -->
+  <div id="msg" class="hidden p-3 rounded text-sm"></div>
 
-    <!-- Crear ubicación raíz -->
-    <section class="border border-slate-200 rounded-lg p-4 space-y-3">
-      <h2 class="text-lg font-semibold text-slate-900">Añadir ubicación raíz</h2>
+  <!-- Crear ubicación raíz -->
+  <section class="border border-slate-200 rounded-lg p-4 space-y-3">
+    <h2 class="text-lg font-semibold text-slate-900">Añadir ubicación raíz</h2>
 
-      <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
-        <div class="flex-1">
-          <label for="root-name" class="block text-sm font-medium text-slate-700">Nombre</label>
-          <input id="root-name" type="text"
-                 class="mt-1 w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                 placeholder="Ej: Armario del salón">
-        </div>
-
-        <button id="btn-add-root"
-                class="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition">
-          Crear
-        </button>
-      </div>
-    </section>
-
-    <!-- Tabla de ubicaciones -->
-    <section class="space-y-3">
-
-      <div class="flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-slate-900">Árbol de ubicaciones</h2>
-
-        <button id="btn-refresh"
-                class="text-sm px-3 py-1 border border-slate-300 rounded hover:bg-slate-50">
-          Recargar
-        </button>
+    <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
+      <div class="flex-1">
+        <label for="root-name" class="block text-sm font-medium text-slate-700">Nombre</label>
+        <input id="root-name" type="text"
+          class="mt-1 w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+          placeholder="Ej: Armario del salón">
       </div>
 
-      <div class="border border-slate-200 rounded-lg overflow-hidden bg-sky-50">
-        <table class="w-full text-sm border-collapse">
-          <thead class="bg-slate-50 text-slate-800">
-            <tr class="text-sm hover:bg-teal-50/70 motion-safe:transition-colors">
-              <th class="border px-3 py-2 text-left w-1/2">Ruta</th>
-              <th class="border px-3 py-2 text-left">Nombre</th>
-              <th class="border px-3 py-2 text-center">Acciones</th>
-            </tr>
-          </thead>
+      <button id="btn-add-root" class="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition">
+        Crear
+      </button>
+    </div>
+  </section>
 
-          <tbody id="locations-tbody">
-            <tr class="text-sm hover:bg-teal-50/70 motion-safe:transition-colors">
-              <td colspan="3" class="border px-3 py-3 text-center text-slate-500">
-                Cargando ubicaciones…
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+  <!-- Tabla de ubicaciones -->
+  <section class="space-y-3">
 
-      <p class="text-xs text-slate-500">
-        Puedes añadir hijos, renombrar o eliminar ubicaciones.<br>
-        No se podrán eliminar si tienen sub-ubicaciones, productos o historial asociado.
-      </p>
+    <div class="flex items-center justify-between">
+      <h2 class="text-lg font-semibold text-slate-900">Árbol de ubicaciones</h2>
 
-    </section>
+      <button id="btn-refresh" class="text-sm px-3 py-1 border border-slate-300 rounded hover:bg-slate-50">
+        Recargar
+      </button>
+    </div>
+
+    <div class="border border-slate-200 rounded-lg overflow-hidden bg-sky-50">
+      <table class="w-full text-sm border-collapse">
+        <thead class="bg-slate-50 text-slate-800">
+          <tr class="text-sm hover:bg-teal-50/70 motion-safe:transition-colors">
+            <th class="border px-3 py-2 text-left w-1/2">Ruta</th>
+            <th class="border px-3 py-2 text-left">Nombre</th>
+            <th class="border px-3 py-2 text-center">Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody id="locations-tbody">
+          <tr class="text-sm hover:bg-teal-50/70 motion-safe:transition-colors">
+            <td colspan="3" class="border px-3 py-3 text-center text-slate-500">
+              Cargando ubicaciones…
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="text-xs text-slate-500">
+      Puedes añadir hijos, renombrar o eliminar ubicaciones.<br>
+      No se podrán eliminar si tienen sub-ubicaciones, productos o historial asociado.
+    </p>
+
+  </section>
 
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-/* ======================
-   ==   JS ORIGINAL     ==
-   ====================== */
+  /* ======================
+     ==   JS ORIGINAL     ==
+     ====================== */
 
-function getCookie(name) {
+  const PAGE_SIZE = 25;
+  let LOC_PAGE = 1;
+  let LAST_LOC_TREE = [];
+
+  function paginate(items, page) {
+    const start = (page - 1) * PAGE_SIZE;
+    return items.slice(start, start + PAGE_SIZE);
+  }
+
+
+  function getCookie(name) {
     const v = `; ${document.cookie}`;
     const p = v.split(`; ${name}=`);
     if (p.length === 2) return p.pop().split(";").shift();
-}
-const csrftoken = getCookie("csrftoken");
+  }
+  const csrftoken = getCookie("csrftoken");
 
-const API_BASE = "/api";
+  const API_BASE = "/api";
 
-const msgBox = document.getElementById("msg");
-const tbody = document.getElementById("locations-tbody");
-const btnRefresh = document.getElementById("btn-refresh");
-const btnAddRoot = document.getElementById("btn-add-root");
-const rootNameInput = document.getElementById("root-name");
+  const msgBox = document.getElementById("msg");
+  const tbody = document.getElementById("locations-tbody");
+  const btnRefresh = document.getElementById("btn-refresh");
+  const btnAddRoot = document.getElementById("btn-add-root");
+  const rootNameInput = document.getElementById("root-name");
 
-function showMessage(text, type = "info") {
+  function showMessage(text, type = "info") {
     msgBox.textContent = text;
     msgBox.classList.remove(
       "hidden",
@@ -110,14 +116,14 @@ function showMessage(text, type = "info") {
     } else {
       msgBox.classList.add("bg-teal-50", "text-teal-800");
     }
-}
+  }
 
-function clearMessage() {
+  function clearMessage() {
     msgBox.classList.add("hidden");
     msgBox.textContent = "";
-}
+  }
 
-async function loadTree() {
+  async function loadTree() {
     try {
       clearMessage();
       tbody.innerHTML = `
@@ -129,42 +135,44 @@ async function loadTree() {
       `;
 
       const res = await fetch(`${API_BASE}/locations/tree/`, {
-          headers: { "Accept": "application/json" },
-          credentials: "same-origin",
+        headers: { "Accept": "application/json" },
+        credentials: "same-origin",
       });
 
       const text = await res.text();
       let data;
       try {
-          data = JSON.parse(text);
+        data = JSON.parse(text);
       } catch (e) {
-          console.error("Respuesta no JSON en /locations/tree/:", text);
-          showMessage(`Error al obtener ubicaciones (${res.status})`, "error");
-          return;
+        console.error("Respuesta no JSON en /locations/tree/:", text);
+        showMessage(`Error al obtener ubicaciones (${res.status})`, "error");
+        return;
       }
 
       if (!res.ok) {
-          console.error("Error tree:", data);
-          showMessage(`Error al obtener ubicaciones (${res.status})`, "error");
-          return;
+        console.error("Error tree:", data);
+        showMessage(`Error al obtener ubicaciones (${res.status})`, "error");
+        return;
       }
 
       const tree = data.tree || [];
-      renderTree(tree);
+      LAST_LOC_TREE = tree;
+      LOC_PAGE = 1;
+      renderTree(LAST_LOC_TREE);
     } catch (e) {
       console.error(e);
       showMessage("Error de red al cargar ubicaciones", "error");
     }
-}
+  }
 
-function renderTree(tree) {
+  function renderTree(tree) {
     const rows = [];
     function walk(nodes, depth) {
       nodes.forEach((node) => {
-          rows.push(rowForNode(node, depth));
-          if (node.children && node.children.length) {
-              walk(node.children, depth + 1);
-          }
+        rows.push(rowForNode(node, depth));
+        if (node.children && node.children.length) {
+          walk(node.children, depth + 1);
+        }
       });
     }
     walk(tree, 0);
@@ -178,11 +186,57 @@ function renderTree(tree) {
         </tr>
       `;
     } else {
-      tbody.innerHTML = rows.join("");
-    }
-}
+      const totalRows = rows.length;
+      const totalPages = Math.ceil(totalRows / PAGE_SIZE) || 1;
 
-function rowForNode(node, depth) {
+      if (LOC_PAGE < 1) LOC_PAGE = 1;
+      if (LOC_PAGE > totalPages) LOC_PAGE = totalPages;
+
+      const pageRows = paginate(rows, LOC_PAGE);
+      tbody.innerHTML = pageRows.join("");
+
+      // 🔽 PAGINADOR
+      if (totalPages > 1) {
+        const pagerRow = document.createElement("tr");
+        pagerRow.innerHTML = `
+          <td colspan="3" class="border px-3 py-3">
+            <div class="flex justify-center items-center gap-4 text-sm">
+              <button class="prev px-3 py-1 border rounded disabled:opacity-40"
+                      ${LOC_PAGE === 1 ? "disabled" : ""}>
+                ← Anterior
+              </button>
+
+              <span>Página ${LOC_PAGE} / ${totalPages}</span>
+
+              <button class="next px-3 py-1 border rounded disabled:opacity-40"
+                      ${LOC_PAGE === totalPages ? "disabled" : ""}>
+                Siguiente →
+              </button>
+            </div>
+          </td>
+        `;
+
+        pagerRow.querySelector(".prev").onclick = () => {
+          if (LOC_PAGE > 1) {
+            LOC_PAGE--;
+            renderTree(LAST_LOC_TREE);
+          }
+        };
+
+        pagerRow.querySelector(".next").onclick = () => {
+          if (LOC_PAGE < totalPages) {
+            LOC_PAGE++;
+            renderTree(LAST_LOC_TREE);
+          }
+        };
+
+        tbody.appendChild(pagerRow);
+      }
+    }
+
+  }
+
+  function rowForNode(node, depth) {
     const indent = depth * 1.5;
     const safePath = node.path || node.name;
 
@@ -212,9 +266,9 @@ function rowForNode(node, depth) {
       </td>
     </tr>
     `;
-}
+  }
 
-async function createRoot() {
+  async function createRoot() {
     const name = (rootNameInput.value || "").trim();
     if (!name) {
       showMessage("Introduce un nombre para la ubicación raíz", "error");
@@ -223,32 +277,32 @@ async function createRoot() {
 
     try {
       const res = await fetch(`${API_BASE}/locations/create/`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": csrftoken,
-          },
-          credentials: "same-origin",
-          body: JSON.stringify({ name }),
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrftoken,
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({ name }),
       });
 
       const text = await res.text();
       let data;
       try { data = JSON.parse(text); }
       catch {
-          console.error("Respuesta no JSON en create:", text);
-          showMessage(`Error al crear ubicación (${res.status})`, "error");
-          return;
+        console.error("Respuesta no JSON en create:", text);
+        showMessage(`Error al crear ubicación (${res.status})`, "error");
+        return;
       }
 
       if (!res.ok || data.ok === false) {
-          console.error("Create error:", data);
-          if (data.error === "duplicate_name") {
-              showMessage("Ya existe una ubicación con ese nombre en este nivel.", "error");
-          } else {
-              showMessage(data.detail || "No se pudo crear la ubicación", "error");
-          }
-          return;
+        console.error("Create error:", data);
+        if (data.error === "duplicate_name") {
+          showMessage("Ya existe una ubicación con ese nombre en este nivel.", "error");
+        } else {
+          showMessage(data.detail || "No se pudo crear la ubicación", "error");
+        }
+        return;
       }
 
       rootNameInput.value = "";
@@ -258,9 +312,9 @@ async function createRoot() {
       console.error(e);
       showMessage("Error de red al crear ubicación", "error");
     }
-}
+  }
 
-async function handleRowClick(e) {
+  async function handleRowClick(e) {
     const btn = e.target.closest("button[data-action]");
     if (!btn) return;
 
@@ -275,40 +329,40 @@ async function handleRowClick(e) {
     } else if (action === "delete") {
       await deleteLocation(id);
     }
-}
+  }
 
-async function addChild(parentId) {
+  async function addChild(parentId) {
     const name = prompt("Nombre de la nueva sub-ubicación:");
     if (!name) return;
 
     try {
       const res = await fetch(`${API_BASE}/locations/create/`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": csrftoken,
-          },
-          credentials: "same-origin",
-          body: JSON.stringify({ name: name.trim(), parent_id: parentId }),
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrftoken,
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({ name: name.trim(), parent_id: parentId }),
       });
 
       const text = await res.text();
       let data;
       try { data = JSON.parse(text); }
       catch {
-          console.error("Respuesta no JSON en addChild:", text);
-          showMessage(`Error al crear sub-ubicación (${res.status})`, "error");
-          return;
+        console.error("Respuesta no JSON en addChild:", text);
+        showMessage(`Error al crear sub-ubicación (${res.status})`, "error");
+        return;
       }
 
       if (!res.ok || data.ok === false) {
-          console.error("Add-child error:", data);
-          if (data.error === "duplicate_name") {
-              showMessage("Ya existe una sub-ubicación con ese nombre en este nivel.", "error");
-          } else {
-              showMessage(data.detail || "No se pudo crear la sub-ubicación", "error");
-          }
-          return;
+        console.error("Add-child error:", data);
+        if (data.error === "duplicate_name") {
+          showMessage("Ya existe una sub-ubicación con ese nombre en este nivel.", "error");
+        } else {
+          showMessage(data.detail || "No se pudo crear la sub-ubicación", "error");
+        }
+        return;
       }
 
       showMessage("Sub-ubicación creada correctamente", "success");
@@ -317,9 +371,9 @@ async function addChild(parentId) {
       console.error(e);
       showMessage("Error de red al crear sub-ubicación", "error");
     }
-}
+  }
 
-async function renameOrMove(locId) {
+  async function renameOrMove(locId) {
     const newName = prompt("Nuevo nombre (deja vacío para mantener el actual):");
     const parentIdStr = prompt("Nuevo padre (ID UUID) o vacío para mantener el padre actual:");
 
@@ -330,35 +384,35 @@ async function renameOrMove(locId) {
 
     try {
       const res = await fetch(`${API_BASE}/locations/update/${locId}/`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": csrftoken,
-          },
-          credentials: "same-origin",
-          body: JSON.stringify(payload),
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrftoken,
+        },
+        credentials: "same-origin",
+        body: JSON.stringify(payload),
       });
 
       const text = await res.text();
       let data;
       try { data = JSON.parse(text); }
       catch {
-          console.error("Respuesta no JSON en update:", text);
-          showMessage(
-            `Error al actualizar ubicación (${res.status}). Mira la consola.`,
-            "error"
-          );
-          return;
+        console.error("Respuesta no JSON en update:", text);
+        showMessage(
+          `Error al actualizar ubicación (${res.status}). Mira la consola.`,
+          "error"
+        );
+        return;
       }
 
       if (!res.ok || data.ok === false) {
-          console.error("Update error:", data);
-          if (data.error === "duplicate_name") {
-              showMessage("Ya existe otra ubicación con ese nombre en este nivel.", "error");
-          } else {
-              showMessage(data.detail || `No se pudo actualizar (status ${res.status})`, "error");
-          }
-          return;
+        console.error("Update error:", data);
+        if (data.error === "duplicate_name") {
+          showMessage("Ya existe otra ubicación con ese nombre en este nivel.", "error");
+        } else {
+          showMessage(data.detail || `No se pudo actualizar (status ${res.status})`, "error");
+        }
+        return;
       }
 
       showMessage("Ubicación actualizada correctamente", "success");
@@ -367,49 +421,49 @@ async function renameOrMove(locId) {
       console.error(e);
       showMessage("Error de red al actualizar ubicación", "error");
     }
-}
+  }
 
-async function deleteLocation(locId) {
+  async function deleteLocation(locId) {
     if (!confirm(
-        "¿Seguro que quieres eliminar esta ubicación? (solo posible si no tiene sub-ubicaciones, productos ni historial asociado)"
+      "¿Seguro que quieres eliminar esta ubicación? (solo posible si no tiene sub-ubicaciones, productos ni historial asociado)"
     )) {
       return;
     }
 
     try {
       const res = await fetch(`${API_BASE}/locations/delete/${locId}/`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": csrftoken,
-          },
-          credentials: "same-origin",
-          body: JSON.stringify({}),
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrftoken,
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({}),
       });
 
       const text = await res.text();
       let data;
       try { data = JSON.parse(text); }
       catch {
-          console.error("Respuesta no JSON en delete:", text);
-          showMessage(
-            `Error al eliminar ubicación (${res.status}). Mira la consola.`,
-            "error"
-          );
-          return;
+        console.error("Respuesta no JSON en delete:", text);
+        showMessage(
+          `Error al eliminar ubicación (${res.status}). Mira la consola.`,
+          "error"
+        );
+        return;
       }
 
       if (!res.ok || data.ok === false) {
-          console.error("Delete error:", data);
-          if (data.error === "location_in_use") {
-              showMessage(
-                "No se puede eliminar: la ubicación tiene sub-ubicaciones, productos o historial asociado.",
-                "error"
-              );
-          } else {
-              showMessage(data.detail || `No se pudo eliminar (status ${res.status})`, "error");
-          }
-          return;
+        console.error("Delete error:", data);
+        if (data.error === "location_in_use") {
+          showMessage(
+            "No se puede eliminar: la ubicación tiene sub-ubicaciones, productos o historial asociado.",
+            "error"
+          );
+        } else {
+          showMessage(data.detail || `No se pudo eliminar (status ${res.status})`, "error");
+        }
+        return;
       }
 
       showMessage("Ubicación eliminada", "success");
@@ -418,13 +472,13 @@ async function deleteLocation(locId) {
       console.error(e);
       showMessage("Error de red al eliminar ubicación", "error");
     }
-}
+  }
 
-document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("DOMContentLoaded", () => {
     tbody.addEventListener("click", handleRowClick);
     btnRefresh.addEventListener("click", loadTree);
     btnAddRoot.addEventListener("click", createRoot);
     loadTree();
-});
+  });
 </script>
 {% endblock %}

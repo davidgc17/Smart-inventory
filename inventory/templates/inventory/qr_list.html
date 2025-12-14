@@ -8,16 +8,72 @@
   <h1 class="text-3xl font-bold text-teal-700 mb-4">📄 Consulta de códigos QR</h1>
 
   {% if qr_files %}
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-      {% for qr in qr_files %}
-        <div class="border border-slate-300 rounded bg-white p-2 shadow-sm">
-          <img src="{{ qr.url }}" alt="{{ qr.name }}" />
-          <p class="mt-2 text-sm text-center text-slate-700 break-words">{{ qr.name }}</p>
-        </div>
-      {% endfor %}
+  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+    {% for qr in qr_files %}
+    <div class="qr-card border border-slate-300 rounded bg-white p-2 shadow-sm">
+      <img src="{{ qr.url }}" alt="{{ qr.name }}" />
+      <p class="mt-2 text-sm text-center text-slate-700 break-words">{{ qr.name }}</p>
     </div>
+    {% endfor %}
+  </div>
   {% else %}
-    <p class="text-slate-600 text-sm">No se encontraron códigos QR en la carpeta <code class="bg-slate-100 px-1 py-0.5 rounded text-xs">/media/qr/</code>.</p>
+  <p class="text-slate-600 text-sm">No se encontraron códigos QR en la carpeta <code
+      class="bg-slate-100 px-1 py-0.5 rounded text-xs">/media/qr/</code>.</p>
   {% endif %}
 </div>
+
+
+<!-- Render paginas -->
+<div id="qr-pager" class="mt-6 flex justify-center items-center gap-4 text-sm"></div>
+
+<script>
+  const PAGE_SIZE = 25;
+  let QR_PAGE = 1;
+
+  function renderQrPage() {
+    const cards = Array.from(document.querySelectorAll('.qr-card'));
+    const total = cards.length;
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+    // clamp QR_PAGE
+    if (QR_PAGE < 1) QR_PAGE = 1;
+    if (QR_PAGE > totalPages) QR_PAGE = totalPages;
+
+    const start = (QR_PAGE - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+
+    cards.forEach((el, idx) => {
+      el.style.display = (idx >= start && idx < end) ? '' : 'none';
+    });
+
+    const pager = document.getElementById('qr-pager');
+    if (!pager) return;
+
+    if (totalPages <= 1) {
+      pager.innerHTML = '';
+      return;
+    }
+
+    pager.innerHTML = `
+      <button type="button"
+        ${QR_PAGE === 1 ? 'disabled' : ''}
+        onclick="QR_PAGE--; renderQrPage();"
+        class="px-3 py-1 border rounded disabled:opacity-40">
+        ← Anterior
+      </button>
+
+      <span>Página <b>${QR_PAGE}</b> de <b>${totalPages}</b></span>
+
+      <button type="button"
+        ${QR_PAGE === totalPages ? 'disabled' : ''}
+        onclick="QR_PAGE++; renderQrPage();"
+        class="px-3 py-1 border rounded disabled:opacity-40">
+        Siguiente →
+      </button>
+    `;
+  }
+
+  document.addEventListener('DOMContentLoaded', renderQrPage);
+</script>
+
 {% endblock %}

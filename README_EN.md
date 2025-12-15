@@ -1,11 +1,10 @@
-# 🧠 Smart Inventory  
-### Intelligent Inventory Management System (Django + Tailwind)
+# 🧠 Smart Inventory
+### Inventory Management System — v0.1 (tester-local)
 
-This is the English version of the README.  
-[🇪🇸 Leer en español](README_ES.md)
+[🇪🇸 Leer en español](README.md)
 
-A web application for managing household or office inventory with fast input/output flows, QR scanning, auditing, and recursive location structure.  
-Designed for real use and as a polished technical portfolio project.
+Smart Inventory is a web application for **real-world inventory management**, designed for **local use by a single user**.
+Version **v0.1 (tester-local)** is technically frozen and stable, with a strong focus on **data integrity, traceability, and practical usability**.
 
 ---
 
@@ -22,67 +21,56 @@ Designed for real use and as a polished technical portfolio project.
 
 ---
 
-## 🚀 Key Features
+## 🚀 Features included in v0.1
 
-- Fast input/output (QR or form)
-- Recursive hierarchical locations  
-- Batch management with expiration tracking  
-- Local and global audits  
-- Modern UI with Tailwind + Alpine.js  
-- Full movement traceability  
-- Customized Django admin  
-
----
-
-## 🧩 Architecture
-
-- Backend: Django + DRF  
-- Frontend: TailwindCSS + Alpine.js  
-- Database: SQLite / PostgreSQL  
+- Fast input/output (QR or manual form)
+- **Batch-based stock management** with expiration tracking
+- Recursive hierarchical locations
+- Location-based and global audits
+- Stable pagination (25 items per view)
+- Modern responsive UI (Tailwind + Alpine.js)
+- Full movement traceability
+- Customized Django admin
+- Automatic database backups
+- Minimal security hardening
 
 ---
 
-## 🔧 Installation
+## 🧩 Technical Architecture
 
-```bash
-git clone https://github.com/your-user/smart-inventory.git
-cd smart-inventory
-python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py runserver
-```
+- Backend: Django + Django REST Framework
+- Frontend: TailwindCSS + Alpine.js
+- Database: SQLite (local)
+- Design focus: atomicity, integrity, additive-only changes
 
 ---
 
-## 📚 Technical Documentation
+## 🔐 Scope and design decisions (v0.1)
 
-Available in `docs/`:
-- `smart_inventory.tex`
-- `smart_inventory.pdf`
+- 👤 Single user
+- 🌐 Local / LAN usage
+- 💾 Local database (SQLite)
+- 🔒 No authentication or roles
+- 🔄 No sync or offline mode
+- 📦 Distribution and installers **out of scope for v0.1**
 
 ---
 
-## 🗺️ Roadmap
+## 🧊 Project status
 
-- ✔️ Phase 1–3 completed  
-- 🔐 Phase 4 – Login  
-- 🛡️ Phase 5 – Security  
-- 📦 Phase 6 – Deployment  
-- 📊 Phase 7 – Analytics  
-- 🤖 Phase 8 – ML  
+**v0.1 (tester-local) — FREEZE**
+- Only critical fixes allowed
+- Business logic frozen
+- Stable base for v0.2
 
 ---
 
 ## 📄 License
 
-This project is licensed under the **MIT License**.  
-You can read the full terms in the `LICENSE` file.  
-Additional information in `NOTICE`.
+MIT License.
 
 ---
 
 ## 👤 Author
 
-Project developed by **David García**.
+David García

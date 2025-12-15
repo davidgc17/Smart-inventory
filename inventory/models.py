@@ -688,6 +688,29 @@ class Batch(models.Model):
         return cls.ACTION_ASK_OPEN_OR_CONSUME, target_batch
 
 
+class AppMeta(models.Model):
+    tenant_id = models.UUIDField(
+        default=DEFAULT_TENANT,
+        editable=False,
+        db_index=True,
+    )
+
+    schema_version = models.PositiveIntegerField(default=1)
+    app_version = models.CharField(
+        max_length=50,
+        default="0.1-alpha (tester-local)",
+    )
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenant_id"],
+                name="uniq_appmeta_per_tenant",
+            )
+        ]
+
 # =========================
 #  Signals: auto-crear Organization por usuario
 # =========================

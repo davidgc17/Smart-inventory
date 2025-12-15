@@ -19,7 +19,7 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import IsAuthenticated
 
 from .utils import available_stock
-from .models import Batch, Product, Location, Movement
+from .models import Batch, Product, Location, Movement, AppMeta
 from .serializers import ProductSerializer, LocationSerializer, MovementSerializer
 
 # 👇 IMPORTAMOS LAS VISTAS DE UBICACIONES
@@ -108,6 +108,7 @@ class ProductQuickSearch(APIView):
             return Response({"results": []})
 
         tenant_id = get_tenant_from_request(request)
+        
 
         qs = (
             Product.objects.filter(
@@ -261,34 +262,35 @@ class ScanEndpoint(APIView):
                     "Debe indicar una ubicación o el producto debe tener una ubicación asignada.",
                 )
 
-            batch = Batch.objects.create(
-                product=product,
-                quantity=abs(qty),
-                expiration_date=expiration_date,
-                tenant_id=tenant_id,
+            with transaction.atomic():
+                batch = Batch.objects.create(
+                    product=product,
+                    quantity=abs(qty),
+                    expiration_date=expiration_date,
+                    tenant_id=tenant_id,
 
-                # --- Metadatos específicos del lote ---
-                brand=new_data.get("brand"),
-                origin=new_data.get("origin"),
-                primary_color=new_data.get("primary_color"),
-                dimensions=new_data.get("dimensions"),
-                estimated_value=new_data.get("estimated_value") or None,
-                notes=new_data.get("notes"),
-            )
+                    # --- Metadatos específicos del lote ---
+                    brand=new_data.get("brand"),
+                    origin=new_data.get("origin"),
+                    primary_color=new_data.get("primary_color"),
+                    dimensions=new_data.get("dimensions"),
+                    estimated_value=new_data.get("estimated_value") or None,
+                    notes=new_data.get("notes"),
+                )
 
-            Movement.objects.create(
-                product=product,
-                location=loc_final,
-                quantity=abs(qty),
-                movement_type="IN",
-                metadata={"batch_id": batch.id, "entry_date": str(batch.entry_date)},
-                tenant_id=tenant_id,
-            )
+                Movement.objects.create(
+                    product=product,
+                    location=loc_final,
+                    quantity=abs(qty),
+                    movement_type="IN",
+                    metadata={"batch_id": batch.id, "entry_date": str(batch.entry_date)},
+                    tenant_id=tenant_id,
+                )
 
-            payload_str = product.qr_payload or f"PRD:{product.id}"
-            if not product.qr_payload:
-                product.qr_payload = payload_str
-                product.save(update_fields=["qr_payload"])
+                payload_str = product.qr_payload or f"PRD:{product.id}"
+                if not product.qr_payload:
+                    product.qr_payload = payload_str
+                    product.save(update_fields=["qr_payload"])
 
             return Response(
                 {
@@ -320,45 +322,54 @@ class ScanEndpoint(APIView):
                 "Debes seleccionar una ubicación para crear un producto nuevo.",
             )
 
-        product, created = Product.objects.get_or_create(
-            name=name,
-            location=location,
-            tenant_id=tenant_id,
-            defaults={
-                "category": category,
-                "unit": unit,
-                "min_stock": int(new_data.get("min_stock") or 0),
-            },
-        )
-
-        batch = Batch.objects.create(
-            product=product,
-            quantity=abs(qty),
-            expiration_date=expiration_date,
-            notes=notes,
-            tenant_id=tenant_id,
-        )
-
-        loc_final = location or product.location
-        if not loc_final:
-            return self._error(
-                "location_required",
-                "Debe indicar una ubicación o el producto debe tener una ubicación asignada.",
+        with transaction.atomic():
+            product, created = Product.objects.get_or_create(
+                name=name,
+                location=location,
+                tenant_id=tenant_id,
+                defaults={
+                    "category": category,
+                    "unit": unit,
+                    "min_stock": int(new_data.get("min_stock") or 0),
+                },
             )
 
-        Movement.objects.create(
-            product=product,
-            location=loc_final,
-            quantity=abs(qty),
-            movement_type="IN",
-            metadata={"batch_id": batch.id, "entry_date": str(batch.entry_date)},
-            tenant_id=tenant_id,
-        )
+            batch = Batch.objects.create(
+                product=product,
+                quantity=abs(qty),
+                expiration_date=expiration_date,
+                tenant_id=tenant_id,
 
-        payload_str = product.qr_payload or f"PRD:{product.id}"
-        if not product.qr_payload:
-            product.qr_payload = payload_str
-            product.save(update_fields=["qr_payload"])
+                # --- metadatos del lote (v0.1) ---
+                brand=new_data.get("brand"),
+                origin=new_data.get("origin"),
+                primary_color=new_data.get("primary_color"),
+                dimensions=new_data.get("dimensions"),
+                estimated_value=new_data.get("estimated_value") or None,
+                notes=notes,
+            )
+
+
+            loc_final = location or product.location
+            if not loc_final:
+                return self._error(
+                    "location_required",
+                    "Debe indicar una ubicación o el producto debe tener una ubicación asignada.",
+                )
+
+            Movement.objects.create(
+                product=product,
+                location=loc_final,
+                quantity=abs(qty),
+                movement_type="IN",
+                metadata={"batch_id": batch.id, "entry_date": str(batch.entry_date)},
+                tenant_id=tenant_id,
+            )
+
+            payload_str = product.qr_payload or f"PRD:{product.id}"
+            if not product.qr_payload:
+                product.qr_payload = payload_str
+                product.save(update_fields=["qr_payload"])
 
         return Response(
             {
@@ -410,106 +421,110 @@ class ScanEndpoint(APIView):
         # ---------------------------------------------------
         # 1) Si existe una unidad abierta → consumirla primero
         # ---------------------------------------------------
-        opened_batch = Batch.objects.filter(
+        opened_batch_qs = Batch.objects.select_for_update().filter(
             product_id=incoming_uuid,
             tenant_id=tenant_id,
             opened_units__gt=0,
             quantity__gt=0,
             is_depleted=False,
-        ).order_by("open_expires_at", "entry_date").first()
+        ).order_by("open_expires_at", "entry_date")
 
-        if opened_batch:
-            if mark_open:
-                return self._error(
-                    "already_open",
-                    "Este producto ya tiene una unidad abierta. Debes consumirla primero.",
+        with transaction.atomic():
+            opened_batch = opened_batch_qs.first()
+
+            if opened_batch:
+                if mark_open:
+                    return self._error(
+                        "already_open",
+                        "Este producto ya tiene una unidad abierta. Debes consumirla primero.",
+                    )
+
+                prev_qty = opened_batch.quantity
+                opened_batch.quantity = prev_qty - 1
+                if opened_batch.quantity == 0:
+                    opened_batch.is_depleted = True
+                    opened_batch.depleted_at = now()
+
+                opened_batch.opened_units = 0
+                opened_batch.opened_at = None
+                opened_batch.open_expires_at = None
+
+                opened_batch.save(
+                    update_fields=[
+                        "quantity",
+                        "is_depleted",
+                        "depleted_at",
+                        "opened_units",
+                        "opened_at",
+                        "open_expires_at",
+                    ]
                 )
 
-            prev_qty = opened_batch.quantity
-            opened_batch.quantity = prev_qty - 1
-            if opened_batch.quantity == 0:
-                opened_batch.is_depleted = True
-                opened_batch.depleted_at = now()
+                loc_final = location or opened_batch.product.location
+                if not loc_final:
+                    return self._error(
+                        "location_required",
+                        "Debe indicar una ubicación o el producto debe tener una ubicación asignada.",
+                    )
 
-            opened_batch.opened_units = 0
-            opened_batch.opened_at = None
-            opened_batch.open_expires_at = None
-
-            opened_batch.save(
-                update_fields=[
-                    "quantity",
-                    "is_depleted",
-                    "depleted_at",
-                    "opened_units",
-                    "opened_at",
-                    "open_expires_at",
-                ]
-            )
-
-            loc_final = location or opened_batch.product.location
-            if not loc_final:
-                return self._error(
-                    "location_required",
-                    "Debe indicar una ubicación o el producto debe tener una ubicación asignada.",
+                Movement.objects.create(
+                    product=opened_batch.product,
+                    location=loc_final,
+                    quantity=-1,
+                    movement_type="OUT",
+                    metadata={"opened_batch": opened_batch.id},
+                    tenant_id=tenant_id,
                 )
 
-            Movement.objects.create(
-                product=opened_batch.product,
-                location=loc_final,
-                quantity=-1,
-                movement_type="OUT",
-                metadata={"opened_batch": opened_batch.id},
-                tenant_id=tenant_id,
-            )
-
-            return Response(
-                {
-                    "ok": True,
-                    "detail": "Salida registrada consumiendo la unidad abierta.",
-                    "batch_id": opened_batch.id,
-                    "remaining_qty": int(opened_batch.quantity),
-                }
-            )
+                return Response(
+                    {
+                        "ok": True,
+                        "detail": "Salida registrada consumiendo la unidad abierta.",
+                        "batch_id": opened_batch.id,
+                        "remaining_qty": int(opened_batch.quantity),
+                    }
+                )
 
         # ---------------------------------------------------
         # 2) mark_open = True → abrir lote más cercano
         # ---------------------------------------------------
         if mark_open:
-            batch = Batch.objects.filter(
-                product_id=incoming_uuid,
-                tenant_id=tenant_id,
-                is_depleted=False,
-                quantity__gt=0,
-            ).order_by("expiration_date", "entry_date").first()
+            with transaction.atomic():
+                batch = Batch.objects.select_for_update().filter(
+                    product_id=incoming_uuid,
+                    tenant_id=tenant_id,
+                    is_depleted=False,
+                    quantity__gt=0,
+                ).order_by("expiration_date", "entry_date").first()
 
-            if not batch:
-                return self._error("no_stock", "No hay stock para abrir.")
+                if not batch:
+                    return self._error("no_stock", "No hay stock para abrir.")
 
-            if batch.opened_units > 0:
-                return self._error(
-                    "already_open",
-                    "Este lote ya tiene una unidad abierta. Debes consumirla primero.",
+                if batch.opened_units > 0:
+                    return self._error(
+                        "already_open",
+                        "Este lote ya tiene una unidad abierta. Debes consumirla primero.",
+                    )
+
+                if open_days:
+                    open_expires_at = timezone.now() + timezone.timedelta(days=open_days)
+                else:
+                    open_expires_at = None
+
+                batch.opened_units = 1
+                batch.opened_at = timezone.now()
+                batch.open_expires_at = open_expires_at
+                batch.save()
+
+                return Response(
+                    {
+                        "ok": True,
+                        "action": "OPENED",
+                        "detail": "Unidad marcada como abierta",
+                        "batch_id": batch.id,
+                        "open_expires_at": open_expires_at,
+                    }
                 )
-
-            if open_days:
-                open_expires_at = timezone.now() + timezone.timedelta(days=open_days)
-            else:
-                open_expires_at = None
-
-            batch.opened_units = 1
-            batch.opened_at = timezone.now()
-            batch.open_expires_at = open_expires_at
-            batch.save()
-
-            return Response(
-                {
-                    "ok": True,
-                    "action": "OPENED",
-                    "detail": "Unidad marcada como abierta",
-                    "batch_id": batch.id,
-                    "open_expires_at": open_expires_at,
-                }
-            )
 
         # ---------------------------------------------------
         # 3) Flujo FIFO estándar (sin marcar como abierto)
@@ -875,6 +890,14 @@ class ScanEndpoint(APIView):
     def post(self, request):
         try:
             tenant_id = get_tenant_from_request(request)
+
+            AppMeta.objects.get_or_create(
+                tenant_id=tenant_id,
+                defaults={
+                    "schema_version": 1,
+                    "app_version": "0.1-alpha (tester-local)",
+                },
+            )
 
             try:
                 (

@@ -10,6 +10,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login as auth_login
 from django.contrib.auth import logout as auth_logout 
 from django.conf import settings
+from django.db import transaction
 import json, os
 
 @login_required
@@ -136,7 +137,8 @@ def scan_qr_view(request):
     # Acciones automáticas: consumimos directamente
     if action in (Batch.ACTION_AUTO_CONSUME, Batch.ACTION_CONSUME_OPEN):
         try:
-            batch.consume_one()
+            with transaction.atomic():
+                batch.consume_one()
         except ValueError as e:
             messages.error(request, str(e))
             return redirect("scan")
@@ -197,7 +199,8 @@ def scan_action_view(request, batch_id):
 
     if mode == "consume":
         try:
-            batch.consume_one()
+            with transaction.atomic():
+                batch.consume_one()
         except ValueError as e:
             messages.error(request, str(e))
             return redirect("scan")
@@ -225,7 +228,8 @@ def scan_action_view(request, batch_id):
             return redirect("scan")
 
         try:
-            batch.open_one(shelf_life_days=days)
+            with transaction.atomic():
+                batch.open_one(shelf_life_days=days)
         except ValueError as e:
             messages.error(request, str(e))
             return redirect("scan")
@@ -239,6 +243,9 @@ def scan_action_view(request, batch_id):
     else:
         messages.error(request, "Acción no válida.")
         return redirect("scan")
+
+
+
 
 
 

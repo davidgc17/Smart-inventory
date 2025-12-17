@@ -1,114 +1,48 @@
 # 🧠 Smart Inventory
 
-Sistema inteligente de gestión de inventario orientado a **uso real**, con soporte para
-escaneo QR, auditorías, ubicaciones jerárquicas y distribución como aplicación de escritorio.
+📘 **English version:** [README_EN.md](README_EN.md)
 
-**Estado actual:**  
-✅ Versión estable **v0.1**  
-🔄 Proyecto activo — actualmente en **FASE 5 del roadmap general**
+Smart Inventory es una aplicación de gestión de inventario diseñada para uso real,
+pensada para ser clara, estable y fácil de usar tanto en entornos domésticos
+como en pequeños contextos profesionales.
 
----
-
-## 📌 ¿Qué es Smart Inventory?
-
-Smart Inventory es una aplicación desarrollada con Django pensada para gestionar inventarios
-de forma clara y robusta en entornos locales (hogar, taller, pequeño almacén, laboratorio).
-
-Está diseñada para:
-- usarse desde navegador en PC,
-- acceder desde móvil en red local (PWA),
-- distribuirse como ejecutable `.exe` sin dependencias externas.
+El objetivo del proyecto es ofrecer una herramienta que no solo registre productos,
+sino que permita controlar stock, caducidades y ubicaciones de forma estructurada,
+con una base técnica sólida y extensible.
 
 ---
 
-## 🖥️ Vista general de la aplicación
+## 🚀 Uso básico (v0.1)
 
-### Home
-![Home](imgs/home.png)
+Smart Inventory v0.1 está diseñada para uso local en un PC, con acceso opcional desde un móvil en la misma red.
 
-### Inventario y movimientos (IN / OUT / Auditorías)
-![Inventario](imgs/inventario.gif)
+1. Inicia la aplicación.
+2. Accede desde el navegador a `http://localhost:8000`.
+3. Inicia sesión o regístrate con un usuario.
+4. Desde un móvil conectado a la misma WiFi, accede a:
+   `http://IP_DEL_PC:8000`.
 
-### Gestor de ubicaciones jerárquicas
-![Ubicaciones](imgs/ubicaciones.png)
+### Modos principales
+- **Entrada**: registrar nuevos productos o lotes.
+- **Salida**: retirar stock mediante QR o búsqueda manual (FIFO).
+- **Auditoría**: comprobar el estado de un producto concreto.
+- **Auditoría total**: revisión global del inventario.
 
----
-
-## ✅ Estado del proyecto (v0.1)
-
-La versión **v0.1** se considera **estable y usable** para:
-
-- ✔️ Uso local real
-- ✔️ Acceso desde móvil en red local (LAN + PWA)
-- ✔️ Distribución como ejecutable Windows (.exe)
-- ✔️ Persistencia correcta de datos fuera del binario
-- ✔️ Auditorías fiables (bug crítico solucionado en backend)
-
-No es una demo ni un prototipo: es una base sólida sobre la que se seguirá construyendo.
+Las auditorías están limitadas a **25 ítems por página** para garantizar estabilidad y buen rendimiento.
 
 ---
 
-## 🔧 Funcionalidades principales
+## 📱 Uso desde móvil
 
-- 📦 Gestión de productos y lotes
-- 📍 Ubicaciones jerárquicas (árbol)
-- 🔄 Movimientos de inventario:
-  - `IN` (entrada)
-  - `OUT` (salida)
-  - `AUD` (auditoría por ubicación)
-  - `AUDTOTAL` (auditoría global)
-- 📷 Generación y lectura de códigos QR
-- 📱 Acceso móvil (PWA en red local)
-- 🖥️ Ejecutable Windows con PyInstaller
-- 🧾 Logs persistentes
-- 💾 Base de datos local estable
+La aplicación puede utilizarse desde el navegador del móvil si ambos dispositivos están en la misma red local.
+
+Desde el menú de la aplicación es posible añadir un acceso directo a la pantalla de inicio (Android),
+permitiendo abrir Smart Inventory como si fuera una aplicación.
 
 ---
 
-## 🧭 Roadmap (resumen)
+## ⚠️ Limitaciones conocidas (v0.1)
 
-**FASE 1 – Núcleo del inventario**  
-✔️ Completada
-
-**FASE 2 – Lógica de negocio**  
-✔️ Completada
-
-**FASE 3 – UX / UI**  
-🔄 Parcialmente completada (base funcional estable)
-
-**FASE 4 – Login y usuarios**  
-⏳ Pendiente (fuera de v0.1)
-
-**FASE 5 – Hardening y seguridad**  
-🔄 *FASE ACTUAL*
-
-**FASE 6 – Distribución avanzada**  
-⏳ Pendiente
-
-**FASE 7 – Analítica**  
-⏳ Pendiente
-
-**FASE 8 – Machine Learning**  
-⏳ Pendiente (baja prioridad)
-
----
-
-## 🧠 Filosofía del proyecto
-
-- Primero estabilidad, luego features
-- Bugs reales > features nuevas
-- Versiones cerradas y documentadas
-- Cada fase deja una base sólida para la siguiente
-
----
-
-## 📜 Licencia
-
-MIT License.
-
----
-
-## 👤 Autor
-
-David García  
-Proyecto desarrollado como sistema real de inventario y como portfolio técnico.
+- Uso local únicamente (sin acceso desde Internet).
+- Base de datos SQLite local.
+- Versión orientada a testing real y validación de estabilidad antes de nuevas fases.

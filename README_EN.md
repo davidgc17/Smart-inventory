@@ -1,114 +1,48 @@
 # 🧠 Smart Inventory
 
-An intelligent inventory management system designed for **real-world use**, featuring
-QR scanning, audits, hierarchical locations, and desktop distribution.
+📘 **Versión en español:** [README.md](README.md)
 
-**Current status:**  
-✅ Stable release **v0.1**  
-🔄 Active project — currently in **PHASE 5 of the general roadmap**
+Smart Inventory is an inventory management application designed for real-world use,
+focused on clarity, stability and ease of use in both home and small professional environments.
 
----
-
-## 📌 What is Smart Inventory?
-
-Smart Inventory is a Django-based application designed to manage inventory in a clear and
-robust way for local environments (home, workshop, small warehouse, laboratory).
-
-It is designed to:
-- run in a desktop browser,
-- be accessed from mobile devices on a local network (PWA),
-- be distributed as a standalone Windows `.exe`.
+The goal of the project is to provide a tool that not only registers products,
+but also allows structured control of stock, expiration dates and locations,
+built on a solid and extensible technical foundation.
 
 ---
 
-## 🖥️ Application overview
+## 🚀 Basic usage (v0.1)
 
-### Home
-![Home](imgs/home.png)
+Smart Inventory v0.1 is designed for local use on a PC, with optional access from a mobile device on the same network.
 
-### Inventory and movements (IN / OUT / Audits)
-![Inventory](imgs/inventario.gif)
+1. Start the application.
+2. Open your browser at `http://localhost:8000`.
+3. Log in or register a user account.
+4. From a mobile device connected to the same WiFi network, open:
+   `http://PC_IP:8000`.
 
-### Hierarchical location manager
-![Locations](imgs/ubicaciones.png)
+### Main modes
+- **Input**: register new products or batches.
+- **Output**: remove stock using QR or manual search (FIFO).
+- **Audit**: check the status of a single product.
+- **Full audit**: global inventory review.
 
----
-
-## ✅ Project status (v0.1)
-
-Version **v0.1** is considered **stable and usable** for:
-
-- ✔️ Real local usage
-- ✔️ Mobile access over local network (LAN + PWA)
-- ✔️ Windows executable distribution (.exe)
-- ✔️ Persistent data stored outside the binary
-- ✔️ Reliable audits (critical backend bug fixed)
-
-This is not a demo or a prototype: it is a solid base to continue building on.
+Audits are limited to **25 items per page** to ensure stability and performance.
 
 ---
 
-## 🔧 Main features
+## 📱 Mobile usage
 
-- 📦 Product and batch management
-- 📍 Hierarchical locations (tree structure)
-- 🔄 Inventory movements:
-  - `IN` (input)
-  - `OUT` (output)
-  - `AUD` (location audit)
-  - `AUDTOTAL` (global audit)
-- 📷 QR code generation and scanning
-- 📱 Mobile access (local PWA)
-- 🖥️ Windows executable built with PyInstaller
-- 🧾 Persistent logging
-- 💾 Stable local database
+The application can be accessed from a mobile browser when both devices are connected
+to the same local network.
+
+From the application menu, it is possible to add a shortcut to the home screen (Android),
+allowing Smart Inventory to be opened like an app.
 
 ---
 
-## 🧭 Roadmap (summary)
+## ⚠️ Known limitations (v0.1)
 
-**PHASE 1 – Inventory core**  
-✔️ Completed
-
-**PHASE 2 – Business logic**  
-✔️ Completed
-
-**PHASE 3 – UX / UI**  
-🔄 Partially completed (stable functional base)
-
-**PHASE 4 – Authentication and users**  
-⏳ Pending (out of scope for v0.1)
-
-**PHASE 5 – Hardening and security**  
-🔄 *CURRENT PHASE*
-
-**PHASE 6 – Advanced distribution**  
-⏳ Pending
-
-**PHASE 7 – Analytics**  
-⏳ Pending
-
-**PHASE 8 – Machine Learning**  
-⏳ Pending (low priority)
-
----
-
-## 🧠 Project philosophy
-
-- Stability first, features second
-- Real bugs over shiny features
-- Closed, documented releases
-- Each phase provides a solid base for the next one
-
----
-
-## 📜 License
-
-MIT License.
-
----
-
-## 👤 Author
-
-David García  
-Project developed as a real inventory system and technical portfolio.
+- Local use only (no Internet access).
+- Local SQLite database.
+- Version focused on real-world testing and stability validation before further phases.

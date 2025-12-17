@@ -13,8 +13,15 @@ environ.Env.read_env()
 # ---------------------------------------------------------------------
 # Base y .env
 # ---------------------------------------------------------------------
+import sys
+
 load_dotenv()
-BASE_DIR = Path(__file__).resolve().parent.parent
+
+if getattr(sys, "frozen", False):
+    # En modo PyInstaller (exe), _MEIPASS es la carpeta temporal con todo descomprimido
+    BASE_DIR = Path(sys._MEIPASS)
+else:
+    BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-secret")
 DEBUG = os.getenv("DEBUG", "False").lower() == "true"
@@ -22,8 +29,9 @@ DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 # Puedes dejarlo por .env (coma-separado) o usar el default de abajo
 ALLOWED_HOSTS = env.list(
     "ALLOWED_HOSTS",
-    default=["127.0.0.1", "localhost"],
+    default=["127.0.0.1", "localhost", "0.0.0.0", "*"],
 )
+
 
 
 # HTTPS dev por IP (si usas runserver_plus + mkcert). Añade tu IP real.
@@ -36,6 +44,12 @@ LOGOUT_REDIRECT_URL = "login"
 DEFAULT_TENANT = "00000000-0000-0000-0000-000000000001"
 
 
+LOG_DIR = Path(
+    os.environ.get("SMARTINV_LOG_DIR", BASE_DIR / "logs")
+)
+
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -43,7 +57,7 @@ LOGGING = {
         "file": {
             "level": "ERROR",
             "class": "logging.FileHandler",
-            "filename": BASE_DIR / "logs" / "django_errors.log",
+            "filename": LOG_DIR / "django_errors.log",
         },
     },
     "loggers": {
@@ -147,7 +161,12 @@ STATICFILES_DIRS = [BASE_DIR / "static"]           # carpeta de trabajo (dev)
 STATIC_ROOT = BASE_DIR / "staticfiles"             # salida de collectstatic (prod)
 
 MEDIA_URL = "/media/"
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+if "SMARTINV_MEDIA_DIR" in os.environ:
+    MEDIA_ROOT = Path(os.environ["SMARTINV_MEDIA_DIR"])
+else:
+    # Contexto build / dev (PyInstaller importa settings)
+    MEDIA_ROOT = BASE_DIR / "media"
 
 # ---------------------------------------------------------------------
 # DRF

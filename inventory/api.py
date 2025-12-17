@@ -842,6 +842,14 @@ class ScanEndpoint(APIView):
                         "opened_units",
                         "opened_at",
                         "open_expires_at",
+
+                        # 🔽 metadatos por LOTE (para que salgan en AUDTOTAL)
+                        "brand",
+                        "origin",
+                        "primary_color",
+                        "dimensions",
+                        "estimated_value",
+                        "notes",
                     ).order_by("expiration_date")
                 )
 
@@ -863,6 +871,8 @@ class ScanEndpoint(APIView):
                 items.append(
                     {
                         "product": p.name,
+                        "category": p.category,
+                        "unit": p.unit,
                         "total_quantity": total_qty,
                         "nearest_expiration": nearest_exp,
                         "batches": non_empty_batches,

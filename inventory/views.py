@@ -288,8 +288,10 @@ def api_scan(request):
             return JsonResponse({
                 "ok": True,
                 "product_id": product.id,
+                "qr_filename": qr_filename,
                 "message": f"Producto '{product.name}' creado correctamente."
             })
+
 
         elif mtype == "OUT":
             payload = data.get("payload")

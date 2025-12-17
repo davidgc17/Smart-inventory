@@ -1,33 +1,37 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="es" class="h-full">
+
 <head>
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    <meta name="theme-color" content="#0f766e">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <title>{% block title %}Smart Inventory{% endblock %}</title>
 
-    {# ❌ De momento NO dependemos de este CSS compilado #}
-    {# <link rel="stylesheet" href="{% static 'css/output.css' %}"> #}
+    <!--❌ De momento NO dependemos de este CSS compilado -->
 
-    {# ✅ Tailwind desde CDN #}
+    <!--<link rel="stylesheet" href="{% static 'css/output.css' %}"> -->
+
+    <!-- ✅ Tailwind desde CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 
     <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              brand: {
-                bg: '#0f172a',
-                soft: '#0f766e',
-                softHover: '#115e59',
-                accent: '#22c55e',
-              },
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            bg: '#0f172a',
+                            soft: '#0f766e',
+                            softHover: '#115e59',
+                            accent: '#22c55e',
+                        },
+                    },
+                },
             },
-          },
-        },
-      }
+        }
     </script>
 
     <!-- 🔹 AQUÍ Alpine.js -->
@@ -47,9 +51,7 @@
             <!-- Branding -->
             <div class="flex items-center gap-3">
                 <!-- Logo (asegúrate de que está en static/img/logopeq.png) -->
-                <img src="{% static 'img/logopeq.png' %}"
-                    alt="Smart Inventory"
-                    class="h-8 w-8 rounded-full shadow-sm">
+                <img src="{% static 'img/logopeq.png' %}" alt="Smart Inventory" class="h-8 w-8 rounded-full shadow-sm">
 
                 <div class="flex flex-col leading-tight">
                     <p class="text-sm font-semibold tracking-tight text-slate-900">
@@ -63,67 +65,59 @@
 
             <!-- Navbar escritorio -->
             <nav class="hidden md:flex items-center gap-4 text-sm font-medium">
-                <a href="{% url 'home' %}"
-                class="px-2 py-1 rounded-lg hover:bg-teal-50 text-slate-700">
+                <a href="{% url 'home' %}" class="px-2 py-1 rounded-lg hover:bg-teal-50 text-slate-700">
                     Inicio
                 </a>
-                <a href="{% url 'scan' %}"
-                class="px-2 py-1 rounded-lg hover:bg-teal-50 text-slate-700">
+                <a href="{% url 'scan' %}" class="px-2 py-1 rounded-lg hover:bg-teal-50 text-slate-700">
                     Inventario
                 </a>
-                <a href="{% url 'locations-manager' %}"
-                class="px-2 py-1 rounded-lg hover:bg-teal-50 text-slate-700">
+                <a href="{% url 'locations-manager' %}" class="px-2 py-1 rounded-lg hover:bg-teal-50 text-slate-700">
                     Ubicaciones
                 </a>
 
                 {% if user.is_authenticated %}
-                    <div class="flex items-center gap-2 text-sm text-slate-700 ml-auto">
-                        <span class="truncate max-w-[8rem]">{{ user.username }}</span>
-                        <a href="{% url 'logout' %}"
+                <div class="flex items-center gap-2 text-sm text-slate-700 ml-auto">
+                    <span class="truncate max-w-[8rem]">{{ user.username }}</span>
+                    <a href="{% url 'logout' %}"
                         class="px-2 py-1 rounded bg-red-500 hover:bg-red-600 text-white text-xs sm:text-sm">
                         Logout
-                        </a>
-                    </div>
+                    </a>
+                </div>
                 {% endif %}
             </nav>
 
             <!-- Botón menú móvil -->
-            <button
-                type="button"
+            <button type="button"
                 class="md:hidden inline-flex items-center justify-center rounded-md p-2 text-slate-700 hover:bg-teal-50 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                @click="open = !open"
-                aria-label="Abrir menú de navegación"
-            >
+                @click="open = !open" aria-label="Abrir menú de navegación">
                 <!-- Icono hamburguesa -->
-                <svg x-show="!open" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
-                    viewBox="0 0 24 24" stroke="currentColor">
+                <svg x-show="!open" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
                         d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
                 <!-- Icono de cerrar -->
-                <svg x-show="open" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
-                    viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                        d="M6 18L18 6M6 6l12 12" />
+                <svg x-show="open" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18L18 6M6 6l12 12" />
                 </svg>
             </button>
         </div>
 
         <!-- Menú móvil -->
-        <nav
-            x-show="open"
-            x-transition
-            @click.outside="open = false"
-            class="md:hidden border-t border-slate-200 bg-white"
-        >
+        <nav x-show="open" x-transition @click.outside="open = false"
+            class="md:hidden border-t border-slate-200 bg-white">
             <div class="max-w-5xl mx-auto px-4 py-2 flex flex-col gap-1 text-sm font-medium">
-                <a href="{% url 'home' %}" class="px-2 py-2 rounded-lg hover:bg-teal-50 text-slate-700" @click="open = false">
+                <a href="{% url 'home' %}" class="px-2 py-2 rounded-lg hover:bg-teal-50 text-slate-700"
+                    @click="open = false">
                     Inicio
                 </a>
-                <a href="{% url 'scan' %}" class="px-2 py-2 rounded-lg hover:bg-teal-50 text-slate-700" @click="open = false">
+                <a href="{% url 'scan' %}" class="px-2 py-2 rounded-lg hover:bg-teal-50 text-slate-700"
+                    @click="open = false">
                     Inventario
                 </a>
-                <a href="{% url 'locations-manager' %}" class="px-2 py-2 rounded-lg hover:bg-teal-50 text-slate-700" @click="open = false">
+                <a href="{% url 'locations-manager' %}" class="px-2 py-2 rounded-lg hover:bg-teal-50 text-slate-700"
+                    @click="open = false">
                     Ubicaciones
                 </a>
 
@@ -133,7 +127,7 @@
                         {{ user.username }}
                     </span>
                     <a href="{% url 'logout' %}"
-                    class="w-fit px-3 py-1 rounded bg-red-500 hover:bg-red-600 text-white text-sm">
+                        class="w-fit px-3 py-1 rounded bg-red-500 hover:bg-red-600 text-white text-sm">
                         Logout
                     </a>
                 </div>
@@ -156,4 +150,5 @@
 
     {% block extra_js %}{% endblock %}
 </body>
+
 </html>

@@ -206,7 +206,7 @@
 
   <div id="qr-result" class="mt-4 hidden">
     <h4 class="font-semibold text-slate-900">QR generado:</h4>
-    <canvas id="qr-canvas" class="border border-slate-300 rounded p-2 bg-white"></canvas>
+    <img id="qr-image" class="border border-slate-300 rounded p-2 bg-white max-w-xs" alt="QR generado">
     <p class="text-sm text-slate-600 mt-1">Este código identifica el producto generado.</p>
   </div>
 
@@ -740,11 +740,26 @@
 
         const qrValue = inner.payload || payloadRaw || '';
         if (qrValue) {
-          const qrCanvas = document.getElementById('qr-canvas');
           const qrContainer = document.getElementById('qr-result');
+          const qrImg = document.getElementById('qr-image');
+
           qrContainer.classList.remove('hidden');
-          new QRious({ element: qrCanvas, value: qrValue, size: 200, level: 'H' });
+
+          if (qrImg) {
+            qrImg.width = 200;
+            qrImg.height = 200;
+
+            const qr = new QRious({
+              value: qrValue,
+              size: 200,
+              level: 'H'
+            });
+
+            qrImg.src = qr.toDataURL();
+          }
+
         }
+
 
         const detailText = inner.detail || 'Entrada registrada correctamente';
         const shownPayload = inner.payload || payloadRaw || '(no disponible)';

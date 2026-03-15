@@ -22,7 +22,7 @@ from .utils import available_stock
 from .models import Batch, Product, Location, Movement, AppMeta
 from .serializers import ProductSerializer, LocationSerializer, MovementSerializer
 
-# 👇 IMPORTAMOS LAS VISTAS DE UBICACIONES
+
 from .locations_api import (
     LocationTreeView,
     LocationCreateView,

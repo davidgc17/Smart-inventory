@@ -667,6 +667,7 @@
       const raw = await res.text();
       let data;
       try { data = JSON.parse(raw); } catch { data = { non_json: true, raw }; }
+      data = data?.data ?? data;
 
       const headersObj = {};
       res.headers.forEach((v, k) => headersObj[k] = v);

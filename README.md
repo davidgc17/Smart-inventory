@@ -29,11 +29,13 @@ El objetivo del proyecto es ofrecer una herramienta que no solo registre product
 Smart Inventory v0.1 está diseñada para **uso local en un PC**, con acceso opcional desde un móvil en la misma red.
 
 ### 🖥️ Arranque en PC
+
 1. Inicia la aplicación.
 2. Accede desde el navegador a `http://localhost:8000`.
 3. Inicia sesión o regístrate con un usuario.
 
 ### 📱 Acceso desde móvil (misma red)
+
 Desde un móvil conectado a la misma WiFi, accede a:  
 `http://IP_DEL_PC:8000`
 
